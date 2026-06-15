@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <rect width="1200" height="760" fill="#f6f4ed"/>
+  <rect x="70" y="60" width="1060" height="640" rx="18" fill="#171a1f"/>
+  <rect x="70" y="60" width="1060" height="62" rx="18" fill="#22262d"/>
+  <text x="105" y="100" fill="#ffffff" font-family="Arial, sans-serif" font-size="24" font-weight="700">Supabase Project</text>
+  <rect x="95" y="145" width="230" height="525" rx="12" fill="#101317"/>
+  <text x="122" y="185" fill="#9aa6b2" font-family="Arial, sans-serif" font-size="16">Project menu</text>
+  <rect x="120" y="220" width="180" height="42" rx="8" fill="#20252c"/>
+  <text x="145" y="247" fill="#dce3ea" font-family="Arial, sans-serif" font-size="16">Table Editor</text>
+  <rect x="120" y="278" width="180" height="48" rx="8" fill="#3ecf8e"/>
+  <text x="145" y="309" fill="#0b2f22" font-family="Arial, sans-serif" font-size="18" font-weight="700">SQL Editor</text>
+  <rect x="365" y="145" width="735" height="525" rx="12" fill="#22262d" stroke="#343b45"/>
+  <text x="395" y="195" fill="#ffffff" font-family="Arial, sans-serif" font-size="32" font-weight="700">SQL Editor</text>
+  <rect x="395" y="225" width="660" height="320" rx="10" fill="#0f1216" stroke="#343b45"/>
+  <text x="425" y="270" fill="#7dd3fc" font-family="Menlo, monospace" font-size="18">create extension if not exists "pgcrypto";</text>
+  <text x="425" y="312" fill="#dce3ea" font-family="Menlo, monospace" font-size="18">create table if not exists tournaments (</text>
+  <text x="455" y="352" fill="#dce3ea" font-family="Menlo, monospace" font-size="18">id uuid primary key default gen_random_uuid(),</text>
+  <text x="455" y="392" fill="#dce3ea" font-family="Menlo, monospace" font-size="18">slug text unique not null</text>
+  <text x="425" y="432" fill="#dce3ea" font-family="Menlo, monospace" font-size="18">);</text>
+  <rect x="900" y="575" width="155" height="54" rx="10" fill="#3ecf8e"/>
+  <text x="945" y="609" fill="#0b2f22" font-family="Arial, sans-serif" font-size="22" font-weight="700">Run</text>
+  <path d="M345 300 C400 265, 430 260, 505 260" fill="none" stroke="#e9573f" stroke-width="8" stroke-linecap="round"/>
+  <polygon points="506,260 479,249 488,278" fill="#e9573f"/>
+  <path d="M870 530 C900 560, 925 575, 970 585" fill="none" stroke="#e9573f" stroke-width="8" stroke-linecap="round"/>
+  <polygon points="970,585 944,569 947,599" fill="#e9573f"/>
+  <rect x="405" y="555" width="430" height="85" rx="14" fill="#fff8dc" stroke="#e9573f" stroke-width="4"/>
+  <text x="430" y="590" fill="#17211f" font-family="Arial, sans-serif" font-size="22" font-weight="700">2. SQL Editor に貼り付けて Run</text>
+  <text x="430" y="622" fill="#17211f" font-family="Arial, sans-serif" font-size="18">schema.sql の中身を全部コピーします。</text>
+  <text x="86" y="735" fill="#66736f" font-family="Arial, sans-serif" font-size="16">案内図: 実際のSupabase画面とは細部が違う場合があります。</text>
+</svg>

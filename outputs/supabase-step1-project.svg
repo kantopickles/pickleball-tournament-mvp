@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <rect width="1200" height="760" fill="#f6f4ed"/>
+  <rect x="70" y="60" width="1060" height="640" rx="18" fill="#171a1f"/>
+  <rect x="70" y="60" width="1060" height="62" rx="18" fill="#22262d"/>
+  <text x="105" y="100" fill="#ffffff" font-family="Arial, sans-serif" font-size="24" font-weight="700">Supabase Dashboard</text>
+  <rect x="100" y="150" width="250" height="510" rx="12" fill="#101317"/>
+  <text x="125" y="195" fill="#9aa6b2" font-family="Arial, sans-serif" font-size="18">Organizations</text>
+  <rect x="125" y="225" width="190" height="42" rx="8" fill="#20252c"/>
+  <text x="145" y="252" fill="#ffffff" font-family="Arial, sans-serif" font-size="16">Your workspace</text>
+  <text x="390" y="195" fill="#ffffff" font-family="Arial, sans-serif" font-size="32" font-weight="700">Projects</text>
+  <rect x="390" y="235" width="260" height="150" rx="14" fill="#22262d" stroke="#343b45"/>
+  <text x="415" y="285" fill="#ffffff" font-family="Arial, sans-serif" font-size="22" font-weight="700">既存プロジェクト</text>
+  <text x="415" y="325" fill="#9aa6b2" font-family="Arial, sans-serif" font-size="16">ここに一覧が出ます</text>
+  <rect x="810" y="150" width="250" height="64" rx="10" fill="#3ecf8e"/>
+  <text x="855" y="191" fill="#0b2f22" font-family="Arial, sans-serif" font-size="24" font-weight="700">New project</text>
+  <path d="M820 300 C790 260, 820 220, 880 205" fill="none" stroke="#e9573f" stroke-width="8" stroke-linecap="round"/>
+  <polygon points="881,205 853,200 869,225" fill="#e9573f"/>
+  <rect x="680" y="300" width="410" height="170" rx="14" fill="#fff8dc" stroke="#e9573f" stroke-width="4"/>
+  <text x="705" y="350" fill="#17211f" font-family="Arial, sans-serif" font-size="28" font-weight="700">1. 右上の New project</text>
+  <text x="705" y="392" fill="#17211f" font-family="Arial, sans-serif" font-size="22">を押します。</text>
+  <text x="705" y="430" fill="#17211f" font-family="Arial, sans-serif" font-size="18">見つからない場合は Projects 画面へ移動します。</text>
+  <text x="86" y="735" fill="#66736f" font-family="Arial, sans-serif" font-size="16">案内図: 実際のSupabase画面とは細部が違う場合があります。</text>
+</svg>

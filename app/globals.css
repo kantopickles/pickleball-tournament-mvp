@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #f4f6ef;
+  background: #111312;
+  --bg: #101211;
+  --surface: #181b19;
+  --surface-strong: #20241f;
+  --line: #30362f;
+  --muted: #a6ada4;
+  --text: #f4f6ef;
+  --green: #42c884;
+  --green-soft: #183327;
+  --yellow: #f5d35f;
+  --orange: #f06f45;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(66, 200, 132, 0.2), transparent 28rem),
+    radial-gradient(circle at 90% 10%, rgba(240, 111, 69, 0.12), transparent 22rem),
+    radial-gradient(circle at bottom right, rgba(245, 211, 95, 0.12), transparent 26rem),
+    #111312;
+  color: var(--text);
+}
+
+input,
+select,
+button {
+  font: inherit;
+}
+
+input,
+select {
+  background: #111312;
+  color: #f4f6ef;
+}
+
+input::placeholder {
+  color: #7f887e;
+}
+
+select option {
+  background: #191c1a;
+  color: #f4f6ef;
+}
+
+@layer components {
+  .app-shell {
+    @apply min-h-screen px-4 py-5 text-[#f4f6ef] sm:px-6 lg:px-8;
+  }
+
+  .page-wrap {
+    @apply mx-auto flex w-full max-w-6xl flex-col gap-5;
+  }
+
+  .hero-panel {
+    @apply overflow-hidden rounded-xl border border-[#30362f] bg-[linear-gradient(135deg,rgba(66,200,132,0.24),rgba(245,211,95,0.09)_48%,rgba(240,111,69,0.12)),#191c1a] p-5 shadow-2xl shadow-black/20;
+  }
+
+  .panel {
+    @apply rounded-xl border border-[#30362f] bg-[#191c1a]/95 p-4 shadow-xl shadow-black/10;
+  }
+
+  .sub-panel {
+    @apply rounded-lg border border-[#30362f] bg-[#111312]/80 p-3;
+  }
+
+  .field {
+    @apply flex flex-col gap-2 text-sm font-semibold text-[#f4f6ef];
+  }
+
+  .input {
+    @apply rounded-md border border-[#30362f] bg-[#111312] px-3 py-3 font-normal text-[#f4f6ef] outline-none transition focus:border-[#42c884] focus:ring-2 focus:ring-[#42c884]/20;
+  }
+
+  .btn-primary {
+    @apply rounded-md bg-[#42c884] px-4 py-3 text-center font-bold text-[#062114] transition hover:bg-[#65d99e] disabled:opacity-60;
+  }
+
+  .btn-danger {
+    @apply rounded-md bg-[#f06f45] px-4 py-3 text-center font-bold text-white transition hover:bg-[#ff835d] disabled:opacity-60;
+  }
+
+  .btn-ghost {
+    @apply rounded-md border border-[#30362f] bg-[#20241f] px-3 py-2 text-center text-sm font-bold text-[#f4f6ef] transition hover:border-[#42c884]/60 hover:bg-[#263027] disabled:opacity-60;
+  }
+
+  .btn-warning {
+    @apply rounded-md bg-[#f5d35f] px-3 py-2 text-center font-bold text-[#111312] transition hover:bg-[#ffe17b] disabled:opacity-60;
+  }
+
+  .eyebrow {
+    @apply text-sm font-semibold text-[#f5d35f];
+  }
+
+  .muted {
+    @apply text-[#a6ada4];
+  }
+
+  .status-chip {
+    @apply rounded-full border px-2.5 py-1 text-xs font-bold;
+  }
+}
