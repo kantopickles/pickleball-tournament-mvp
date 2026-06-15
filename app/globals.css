@@ -110,13 +110,18 @@ select option {
     @apply rounded-full border px-2.5 py-1 text-xs font-bold;
   }
 
-  .title-bag {
-    color: #111312;
-    text-shadow:
-      2px 0 #f5d35f,
-      -2px 0 #f5d35f,
-      0 2px #f5d35f,
-      0 -2px #f5d35f,
-      3px 3px 0 #f06f45;
+  .title-slice {
+    color: #f4f6ef;
+    position: relative;
+  }
+
+  .title-slice::after {
+    content: attr(data-text);
+    color: #f5d35f;
+    left: 0;
+    position: absolute;
+    top: 0;
+    clip-path: polygon(0 42%, 100% 29%, 100% 52%, 0 64%);
+    transform: translateX(8px);
   }
 }
