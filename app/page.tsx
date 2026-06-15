@@ -100,9 +100,9 @@ export default function HomePage() {
       <section className="page-wrap">
         <div className="hero-panel">
           <p className="eyebrow">Pickle Draw MVP</p>
-          <h1 className="mt-3 text-3xl font-bold leading-tight sm:text-4xl">ピックルボール大会を、すぐ回せる形に。</h1>
+          <h1 className="title-bag mt-3 text-3xl font-black leading-tight sm:text-4xl">関東Pickle&apos;s大会結果報告</h1>
           <p className="mt-4 max-w-xl text-sm leading-6 text-[#d5dbd0]">
-            参加者登録、ドロー生成、PIN付き結果入力、順位表までこの画面から始められます。
+            参加者の方は大会一覧より該当試合を開いて下さい
           </p>
         </div>
 

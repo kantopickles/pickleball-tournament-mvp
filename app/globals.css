@@ -23,6 +23,7 @@
 
 body {
   margin: 0;
+  font-family: "Trebuchet MS", "Hiragino Sans", "Yu Gothic", sans-serif;
   background:
     radial-gradient(circle at top left, rgba(66, 200, 132, 0.2), transparent 28rem),
     radial-gradient(circle at 90% 10%, rgba(240, 111, 69, 0.12), transparent 22rem),
@@ -107,5 +108,15 @@ select option {
 
   .status-chip {
     @apply rounded-full border px-2.5 py-1 text-xs font-bold;
+  }
+
+  .title-bag {
+    color: #111312;
+    text-shadow:
+      2px 0 #f5d35f,
+      -2px 0 #f5d35f,
+      0 2px #f5d35f,
+      0 -2px #f5d35f,
+      3px 3px 0 #f06f45;
   }
 }
