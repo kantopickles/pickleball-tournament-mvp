@@ -98,36 +98,71 @@ export default function HomePage() {
   return (
     <main className="app-shell">
       <section className="page-wrap">
-        <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
-          <div className="hero-panel">
-            <p className="eyebrow">Pickle Draw MVP</p>
-            <h1 className="mt-3 text-3xl font-bold leading-tight sm:text-4xl">ピックルボール大会を、すぐ回せる形に。</h1>
-            <p className="mt-4 max-w-xl text-sm leading-6 text-[#d5dbd0]">
-              参加者登録、ドロー生成、PIN付き結果入力、順位表までこの画面から始められます。
-            </p>
-            <div className="mt-6 grid grid-cols-3 gap-2">
-              <div className="sub-panel">
-                <p className="text-xl font-bold text-[#42c884]">{tournaments.length}</p>
-                <p className="mt-1 text-xs text-[#a6ada4]">保存済み</p>
-              </div>
-              <div className="sub-panel">
-                <p className="text-xl font-bold text-[#f5d35f]">3</p>
-                <p className="mt-1 text-xs text-[#a6ada4]">大会形式</p>
-              </div>
-              <div className="sub-panel">
-                <p className="text-xl font-bold text-[#f06f45]">PIN</p>
-                <p className="mt-1 text-xs text-[#a6ada4]">作成制限</p>
-              </div>
+        <div className="hero-panel">
+          <p className="eyebrow">Pickle Draw MVP</p>
+          <h1 className="mt-3 text-3xl font-bold leading-tight sm:text-4xl">ピックルボール大会を、すぐ回せる形に。</h1>
+          <p className="mt-4 max-w-xl text-sm leading-6 text-[#d5dbd0]">
+            参加者登録、ドロー生成、PIN付き結果入力、順位表までこの画面から始められます。
+          </p>
+        </div>
+
+        {message ? <p className="rounded-md border border-[#30362f] bg-[#191c1a] px-3 py-2 text-sm text-[#d5dbd0]">{message}</p> : null}
+
+        <section className="panel">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="eyebrow">Tournaments</p>
+              <h2 className="text-xl font-bold">大会一覧</h2>
             </div>
+            <p className="text-sm text-[#a6ada4]">開く、または作成用PINで削除できます。</p>
+          </div>
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            {tournaments.length === 0 ? <p className="text-sm text-[#a6ada4]">まだ大会はありません。</p> : null}
+            {tournaments.map((tournament) => (
+              <article key={tournament.id} className="rounded-lg border border-[#30362f] bg-[#111312]/80 p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="font-bold">{tournament.name}</h3>
+                    <p className="text-sm text-[#a6ada4]">
+                      {formatLabels[tournament.format]}
+                      {tournament.format === "league" ? ` / ${tournament.block_count}ブロック` : ""} /{" "}
+                      {tournament.match_game_count ?? 1}本勝負 /{" "}
+                      {new Date(tournament.created_at).toLocaleDateString("ja-JP")}
+                    </p>
+                  </div>
+                  <a className="btn-primary px-3 py-2 text-sm" href={`/t/${tournament.slug}`}>
+                    開く
+                  </a>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <input
+                    className="input py-2 text-sm"
+                    onChange={(event) => setDeletePins((current) => ({ ...current, [tournament.slug]: event.target.value }))}
+                    placeholder="削除する場合は作成用PIN"
+                    type="password"
+                    value={deletePins[tournament.slug] ?? ""}
+                  />
+                  <button
+                    className="rounded-md border border-red-900/60 bg-[#191c1a] px-3 py-2 text-sm font-bold text-red-300 transition hover:bg-red-950/40 disabled:opacity-60"
+                    disabled={!deletePins[tournament.slug]}
+                    onClick={() => void deleteTournament(tournament.slug)}
+                    type="button"
+                  >
+                    削除
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <form onSubmit={createTournament} className="panel flex flex-col gap-4">
+          <div>
+            <p className="eyebrow">New tournament</p>
+            <h2 className="mt-1 text-2xl font-bold">大会を作成</h2>
           </div>
 
-          <form onSubmit={createTournament} className="panel flex flex-col gap-4">
-            <div>
-              <p className="eyebrow">New tournament</p>
-              <h2 className="mt-1 text-2xl font-bold">大会を作成</h2>
-            </div>
-
-            <label className="field">
+          <label className="field">
             大会名
             <input
               className="input"
@@ -215,8 +250,6 @@ export default function HomePage() {
             />
           </label>
 
-          {message ? <p className="rounded-md border border-red-900/50 bg-red-950/40 px-3 py-2 text-sm text-red-200">{message}</p> : null}
-
           <button
             className="btn-danger"
             disabled={isSaving}
@@ -225,55 +258,6 @@ export default function HomePage() {
             {isSaving ? "作成中..." : "大会を作成"}
           </button>
         </form>
-        </div>
-
-        <section className="panel">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="eyebrow">Archive</p>
-              <h2 className="text-xl font-bold">過去の大会</h2>
-            </div>
-            <p className="text-sm text-[#a6ada4]">開く、または作成用PINで削除できます。</p>
-          </div>
-          <div className="mt-4 grid gap-3 lg:grid-cols-2">
-            {tournaments.length === 0 ? <p className="text-sm text-[#a6ada4]">まだ大会はありません。</p> : null}
-            {tournaments.map((tournament) => (
-              <article key={tournament.id} className="rounded-lg border border-[#30362f] bg-[#111312]/80 p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h3 className="font-bold">{tournament.name}</h3>
-                    <p className="text-sm text-[#a6ada4]">
-                      {formatLabels[tournament.format]}
-                      {tournament.format === "league" ? ` / ${tournament.block_count}ブロック` : ""} /{" "}
-                      {tournament.match_game_count ?? 1}本勝負 /{" "}
-                      {new Date(tournament.created_at).toLocaleDateString("ja-JP")}
-                    </p>
-                  </div>
-                  <a className="btn-primary px-3 py-2 text-sm" href={`/t/${tournament.slug}`}>
-                    開く
-                  </a>
-                </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
-                  <input
-                    className="input py-2 text-sm"
-                    onChange={(event) => setDeletePins((current) => ({ ...current, [tournament.slug]: event.target.value }))}
-                    placeholder="削除する場合は作成用PIN"
-                    type="password"
-                    value={deletePins[tournament.slug] ?? ""}
-                  />
-                  <button
-                    className="rounded-md border border-red-900/60 bg-[#191c1a] px-3 py-2 text-sm font-bold text-red-300 transition hover:bg-red-950/40 disabled:opacity-60"
-                    disabled={!deletePins[tournament.slug]}
-                    onClick={() => void deleteTournament(tournament.slug)}
-                    type="button"
-                  >
-                    削除
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
       </section>
     </main>
   );
