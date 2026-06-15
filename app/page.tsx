@@ -100,7 +100,7 @@ export default function HomePage() {
       <section className="page-wrap">
         <div className="hero-panel">
           <p className="eyebrow">Pickle Draw MVP</p>
-          <h1 className="title-bag mt-3 text-3xl font-black leading-tight sm:text-4xl">関東Pickle&apos;s大会結果報告</h1>
+          <h1 className="title-bag mt-3 text-3xl font-black leading-tight sm:text-4xl">Pickle Drow</h1>
           <p className="mt-4 max-w-xl text-sm leading-6 text-[#d5dbd0]">
             参加者の方は大会一覧より該当試合を開いて下さい
           </p>
