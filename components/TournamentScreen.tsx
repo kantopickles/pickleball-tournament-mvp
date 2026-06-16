@@ -16,6 +16,9 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const [snapshot, setSnapshot] = useState<TournamentSnapshot | null>(null);
   const [adminPin, setAdminPin] = useState("");
   const [participantPin, setParticipantPin] = useState("");
+  const [loginParticipantPin, setLoginParticipantPin] = useState("");
+  const [selectedParticipantId, setSelectedParticipantId] = useState("");
+  const [activeParticipantId, setActiveParticipantId] = useState("");
   const [participantName, setParticipantName] = useState("");
   const [commonParticipantPin, setCommonParticipantPin] = useState("");
   const [message, setMessage] = useState("");
@@ -129,6 +132,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
       body: JSON.stringify({
         mode: "result",
         pin: adminPin || participantPin,
+        participantId: isAdminMode ? undefined : activeParticipantId,
         participant1Score: Number(draft[0]?.participant1Score ?? ""),
         participant2Score: Number(draft[0]?.participant2Score ?? ""),
         gameScores: draft.map((score) => ({
@@ -137,6 +141,40 @@ export default function TournamentScreen({ slug }: { slug: string }) {
         }))
       })
     });
+  }
+
+  async function loginParticipant(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!loginParticipantPin || !selectedParticipantId) {
+      setMessage("参加者PINと参加者名を選択してください。");
+      return;
+    }
+
+    setIsBusy(true);
+    setMessage("");
+    const response = await fetch(`/api/tournaments/${slug}/participant-login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin: loginParticipantPin, participantId: selectedParticipantId })
+    });
+    const payload = (await response.json()) as { ok?: boolean; error?: string };
+    setIsBusy(false);
+
+    if (!response.ok || !payload.ok) {
+      setMessage(payload.error ?? "ログインできませんでした。");
+      return;
+    }
+
+    setParticipantPin(loginParticipantPin);
+    setActiveParticipantId(selectedParticipantId);
+    setMessage("");
+  }
+
+  function logoutParticipant() {
+    setActiveParticipantId("");
+    setSelectedParticipantId("");
+    setParticipantPin("");
+    setLoginParticipantPin("");
   }
 
   async function unlockMatch(match: Match) {
@@ -222,6 +260,8 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const playoffGroups = groupPlayoffMatches(playoffMatches);
   const lockedCount = snapshot.matches.filter((match) => match.locked).length;
   const openCount = Math.max(snapshot.matches.length - lockedCount, 0);
+  const activeParticipant = activeParticipantId ? participantById.get(activeParticipantId) : null;
+  const isParticipantLoggedIn = Boolean(activeParticipantId && participantPin);
 
   return (
     <main className="app-shell">
@@ -275,6 +315,58 @@ export default function TournamentScreen({ slug }: { slug: string }) {
         </header>
 
         {message ? <p className="rounded-md border border-[#d8dfd2] bg-[#ffffff] px-3 py-2 text-sm text-[#4e5a50]">{message}</p> : null}
+
+        {!isAdminMode && !isParticipantLoggedIn ? (
+          <section className="panel">
+            <p className="eyebrow">Participant login</p>
+            <h2 className="mt-1 text-xl font-bold">参加者ログイン</h2>
+            <p className="mt-3 text-sm leading-6 text-[#4e5a50]">
+              参加者PINを入力し、自分の名前を選んでください。ログイン後は、自分の名前が入っている試合だけ結果入力できます。
+            </p>
+            <form onSubmit={loginParticipant} className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+              <label className="field">
+                参加者PIN
+                <input
+                  className="input"
+                  value={loginParticipantPin}
+                  onChange={(event) => setLoginParticipantPin(event.target.value)}
+                  placeholder="大会管理者から共有されたPIN"
+                  type="password"
+                />
+              </label>
+              <label className="field">
+                参加者名
+                <select className="input" value={selectedParticipantId} onChange={(event) => setSelectedParticipantId(event.target.value)}>
+                  <option value="">選択してください</option>
+                  {snapshot.participants.map((participant) => (
+                    <option key={participant.id} value={participant.id}>
+                      {participant.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button className="btn-primary md:min-w-32" disabled={isBusy} type="submit">
+                {isBusy ? "確認中..." : "入る"}
+              </button>
+            </form>
+            {snapshot.participants.length === 0 ? (
+              <p className="mt-3 text-sm text-[#6f7a70]">まだ参加者が登録されていません。大会管理者に確認してください。</p>
+            ) : null}
+          </section>
+        ) : null}
+
+        {!isAdminMode && isParticipantLoggedIn && activeParticipant ? (
+          <section className="panel flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="eyebrow">Logged in</p>
+              <h2 className="text-lg font-bold">{activeParticipant.name}として入力中</h2>
+              <p className="mt-1 text-sm text-[#4e5a50]">この参加者が含まれる未入力試合だけ保存できます。</p>
+            </div>
+            <button className="btn-ghost" onClick={logoutParticipant} type="button">
+              参加者を変更
+            </button>
+          </section>
+        ) : null}
 
         {isAdminMode ? (
           <section className="grid gap-4 md:grid-cols-2">
@@ -389,10 +481,16 @@ export default function TournamentScreen({ slug }: { slug: string }) {
         </section>
 
         {snapshot.tournament.format === "tournament" ? (
-          <Bracket rounds={rounds} participantById={participantById} onSelectMatch={focusMatch} />
+          <Bracket rounds={rounds} participantById={participantById} onSelectMatch={focusMatch} canSelectMatch={(match) => isAdminMode || isMatchForParticipant(match, activeParticipantId)} />
         ) : (
           <>
-            <LeagueMatrix snapshot={snapshot} matches={leagueMatches} participantById={participantById} onSelectMatch={focusMatch} />
+            <LeagueMatrix
+              snapshot={snapshot}
+              matches={leagueMatches}
+              participantById={participantById}
+              onSelectMatch={focusMatch}
+              canSelectMatch={(match) => isAdminMode || isMatchForParticipant(match, activeParticipantId)}
+            />
             <Standings snapshot={snapshot} />
             {playoffGroups.map((group) => (
               <div key={group.offset} className="grid gap-2">
@@ -410,6 +508,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                   rounds={group.rounds}
                   participantById={participantById}
                   onSelectMatch={focusMatch}
+                  canSelectMatch={(match) => isAdminMode || isMatchForParticipant(match, activeParticipantId)}
                   title={group.title}
                   roundOffset={group.offset}
                 />
@@ -429,6 +528,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
             const right = match.participant2_id ? participantById.get(match.participant2_id)?.name : "未定";
             const draft = getScoreDraft(match);
             const swap = swapDraft[match.id];
+            const canSaveMatch = isAdminMode || (isParticipantLoggedIn && isMatchForParticipant(match, activeParticipantId));
             return (
               <article id={`match-${match.id}`} key={match.id} className="panel scroll-mt-4">
                 <div className="flex items-start justify-between gap-3">
@@ -452,7 +552,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                       <input
                         id={gameIndex === 0 ? `score-${match.id}-1` : undefined}
                         className="input min-w-0 text-center"
-                        disabled={match.locked && !isAdminMode}
+                        disabled={!canSaveMatch || (match.locked && !isAdminMode)}
                         inputMode="numeric"
                         onChange={(event) => setScore(match, gameIndex, "participant1Score", event.target.value)}
                         placeholder="0"
@@ -462,7 +562,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                       <input
                         id={gameIndex === 0 ? `score-${match.id}-2` : undefined}
                         className="input min-w-0 text-center"
-                        disabled={match.locked && !isAdminMode}
+                        disabled={!canSaveMatch || (match.locked && !isAdminMode)}
                         inputMode="numeric"
                         onChange={(event) => setScore(match, gameIndex, "participant2Score", event.target.value)}
                         placeholder="0"
@@ -477,21 +577,14 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                   ) : null}
                 </div>
 
-                {!isAdminMode ? (
-                  <label className="field mt-4">
-                    参加者PIN
-                    <input
-                      className="input"
-                      value={participantPin}
-                      onChange={(event) => setParticipantPin(event.target.value)}
-                      placeholder="結果を保存するときに使います"
-                      type="password"
-                    />
-                  </label>
+                {!isAdminMode && !canSaveMatch ? (
+                  <p className="mt-4 rounded-md border border-[#d8dfd2] bg-[#f7f8f3] px-3 py-2 text-sm text-[#4e5a50]">
+                    {isParticipantLoggedIn ? "選択した参加者が含まれる試合だけ入力できます。" : "結果入力するには、上の参加者ログインをしてください。"}
+                  </p>
                 ) : null}
 
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <button className="btn-primary" disabled={isBusy || (!isAdminMode && match.locked)} onClick={() => void saveResult(match)} type="button">
+                  <button className="btn-primary" disabled={isBusy || !canSaveMatch || (!isAdminMode && match.locked)} onClick={() => void saveResult(match)} type="button">
                     結果を保存
                   </button>
                   {isAdminMode ? (
@@ -561,12 +654,14 @@ function LeagueMatrix({
   snapshot,
   matches,
   participantById,
-  onSelectMatch
+  onSelectMatch,
+  canSelectMatch
 }: {
   snapshot: TournamentSnapshot;
   matches: Match[];
   participantById: Map<string, PublicParticipant>;
   onSelectMatch: (matchId: string) => void;
+  canSelectMatch: (match: Match) => boolean;
 }) {
   const blocks =
     snapshot.tournament.format === "league"
@@ -613,6 +708,7 @@ function LeagueMatrix({
                                 matches={matches}
                                 participantById={participantById}
                                 onSelectMatch={onSelectMatch}
+                                canSelectMatch={canSelectMatch}
                               />
                             )}
                           </td>
@@ -635,13 +731,15 @@ function LeagueCell({
   columnId,
   matches,
   participantById,
-  onSelectMatch
+  onSelectMatch,
+  canSelectMatch
 }: {
   rowId: string;
   columnId: string;
   matches: Match[];
   participantById: Map<string, PublicParticipant>;
   onSelectMatch: (matchId: string) => void;
+  canSelectMatch: (match: Match) => boolean;
 }) {
   const match = matches.find(
     (item) =>
@@ -650,10 +748,12 @@ function LeagueCell({
   );
 
   if (!match) return <span className="text-[#6f7a70]">未</span>;
+  const canSelect = canSelectMatch(match);
   if (match.participant1_score === null || match.participant2_score === null) {
     return (
       <button
-        className="h-full w-full rounded bg-[#fff3ca] px-2 py-2 font-bold text-[#f5d35f] transition hover:bg-[#ffe7a3] focus:outline-none focus:ring-2 focus:ring-[#f06f45]"
+        className="h-full w-full rounded bg-[#fff3ca] px-2 py-2 font-bold text-[#f5d35f] transition hover:bg-[#ffe7a3] focus:outline-none focus:ring-2 focus:ring-[#f06f45] disabled:cursor-not-allowed disabled:opacity-45"
+        disabled={!canSelect}
         onClick={() => onSelectMatch(match.id)}
         type="button"
       >
@@ -683,12 +783,14 @@ function Bracket({
   rounds,
   participantById,
   onSelectMatch,
+  canSelectMatch,
   title = "勝ち上がり表",
   roundOffset = 0
 }: {
   rounds: Match[][];
   participantById: Map<string, PublicParticipant>;
   onSelectMatch: (matchId: string) => void;
+  canSelectMatch: (match: Match) => boolean;
   title?: string;
   roundOffset?: number;
 }) {
@@ -702,7 +804,7 @@ function Bracket({
             <p className="mb-2 text-sm font-bold text-[#42c884]">Round {(round[0]?.round ?? 0) - roundOffset}</p>
             <div className="grid gap-2">
               {round.map((match) => (
-                <BracketMatch key={match.id} match={match} participantById={participantById} onSelectMatch={onSelectMatch} />
+                <BracketMatch key={match.id} match={match} participantById={participantById} onSelectMatch={onSelectMatch} canSelectMatch={canSelectMatch} />
               ))}
             </div>
           </div>
@@ -715,16 +817,19 @@ function Bracket({
 function BracketMatch({
   match,
   participantById,
-  onSelectMatch
+  onSelectMatch,
+  canSelectMatch
 }: {
   match: Match;
   participantById: Map<string, PublicParticipant>;
   onSelectMatch: (matchId: string) => void;
+  canSelectMatch: (match: Match) => boolean;
 }) {
   const left = nameFor(match.participant1_id, participantById);
   const right = nameFor(match.participant2_id, participantById);
   const isReady = Boolean(match.participant1_id && match.participant2_id);
   const hasScore = match.participant1_score !== null && match.participant2_score !== null;
+  const canSelect = canSelectMatch(match);
 
   return (
     <div className="rounded-lg border border-[#d8dfd2] bg-[#eef3ea] p-3 text-sm shadow-lg shadow-black/10">
@@ -736,7 +841,8 @@ function BracketMatch({
             hasScore
               ? "bg-[#ffffff] text-[#42c884] hover:bg-[#dff4e8] focus:ring-[#42c884]"
               : "bg-[#fff3ca] text-[#f5d35f] hover:bg-[#ffe7a3] focus:ring-[#f06f45]"
-          }`}
+          } disabled:cursor-not-allowed disabled:opacity-45`}
+          disabled={!canSelect}
           onClick={() => onSelectMatch(match.id)}
           type="button"
         >
@@ -776,6 +882,10 @@ function groupPlayoffMatches(matches: Match[]) {
 function nameFor(id: string | null, participantById: Map<string, PublicParticipant>) {
   if (!id) return "未定";
   return participantById.get(id)?.name ?? "未定";
+}
+
+function isMatchForParticipant(match: Match, participantId: string) {
+  return Boolean(participantId && (match.participant1_id === participantId || match.participant2_id === participantId));
 }
 
 function groupParticipantsByBlock(participants: PublicParticipant[]) {

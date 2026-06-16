@@ -9,6 +9,7 @@ export async function PATCH(request: Request, { params }: { params: { slug: stri
     pin?: string;
     participant1Id?: string | null;
     participant2Id?: string | null;
+    participantId?: string;
     participant1Score?: number;
     participant2Score?: number;
     gameScores?: GameScore[];
@@ -58,6 +59,12 @@ export async function PATCH(request: Request, { params }: { params: { slug: stri
   const canParticipantEdit = await verifyParticipantPin(tournament.id, body.pin ?? "");
 
   if (!isAdmin && !canParticipantEdit) return jsonError("この試合の参加者PIN、または管理者PINが必要です。", 403);
+  if (!isAdmin) {
+    if (!body.participantId) return jsonError("参加者を選択してください。", 403);
+    if (body.participantId !== match.participant1_id && body.participantId !== match.participant2_id) {
+      return jsonError("選択した参加者が含まれる試合だけ入力できます。", 403);
+    }
+  }
 
   const matchGameCount = Number(tournament.match_game_count ?? 1);
   const gameScores =
