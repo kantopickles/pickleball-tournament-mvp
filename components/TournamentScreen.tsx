@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import type { Match, PublicParticipant, TournamentFormat, TournamentSnapshot } from "@/lib/types";
 
 const formatLabels: Record<TournamentFormat, string> = {
@@ -14,6 +14,8 @@ type SwapDraft = Record<string, { participant1Id: string; participant2Id: string
 
 export default function TournamentScreen({ slug }: { slug: string }) {
   const [snapshot, setSnapshot] = useState<TournamentSnapshot | null>(null);
+  const [accessPin, setAccessPin] = useState("");
+  const [accessMode, setAccessMode] = useState<"participant" | "admin">("participant");
   const [adminPin, setAdminPin] = useState("");
   const [participantPin, setParticipantPin] = useState("");
   const [loginParticipantPin, setLoginParticipantPin] = useState("");
@@ -37,20 +39,6 @@ export default function TournamentScreen({ slug }: { slug: string }) {
 
   const shareUrl = typeof window === "undefined" ? "" : `${window.location.origin}/t/${slug}`;
 
-  useEffect(() => {
-    void refresh();
-  }, []);
-
-  async function refresh() {
-    const response = await fetch(`/api/tournaments/${slug}`);
-    const payload = (await response.json()) as TournamentSnapshot | { error: string };
-    if (!response.ok) {
-      setMessage("大会を読み込めませんでした。");
-      return;
-    }
-    setSnapshot(payload as TournamentSnapshot);
-  }
-
   async function requestSnapshot(path: string, init: RequestInit) {
     setIsBusy(true);
     setMessage("");
@@ -68,6 +56,45 @@ export default function TournamentScreen({ slug }: { slug: string }) {
 
     setSnapshot(payload as TournamentSnapshot);
     return true;
+  }
+
+  async function unlockTournamentAccess(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!accessPin) {
+      setMessage(accessMode === "admin" ? "管理者PINを入力してください。" : "参加者PINを入力してください。");
+      return;
+    }
+
+    setIsBusy(true);
+    setMessage("");
+    const response = await fetch(`/api/tournaments/${slug}/access`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin: accessPin, mode: accessMode })
+    });
+    const payload = (await response.json()) as
+      | { role: "participant" | "admin"; snapshot: TournamentSnapshot }
+      | { error: string };
+    setIsBusy(false);
+
+    if (!response.ok || !("snapshot" in payload)) {
+      setMessage("error" in payload ? payload.error : "大会を開けませんでした。");
+      return;
+    }
+
+    setSnapshot(payload.snapshot);
+
+    if (payload.role === "admin") {
+      setAdminPin(accessPin);
+      setIsAdminMode(true);
+    } else {
+      setParticipantPin(accessPin);
+      setLoginParticipantPin(accessPin);
+      setIsAdminMode(false);
+    }
+
+    setAccessPin("");
+    setMessage("");
   }
 
   async function addParticipant(event: FormEvent<HTMLFormElement>) {
@@ -173,8 +200,6 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   function logoutParticipant() {
     setActiveParticipantId("");
     setSelectedParticipantId("");
-    setParticipantPin("");
-    setLoginParticipantPin("");
   }
 
   async function unlockMatch(match: Match) {
@@ -248,8 +273,53 @@ export default function TournamentScreen({ slug }: { slug: string }) {
 
   if (!snapshot) {
     return (
-      <main className="min-h-screen bg-[#f7f8f3] px-4 py-8 text-[#1f261f]">
-        <p className="mx-auto max-w-xl rounded-xl border border-[#d8dfd2] bg-[#ffffff] p-4">読み込み中...</p>
+      <main className="app-shell">
+        <div className="page-wrap">
+          {message ? <p className="rounded-md border border-[#d8dfd2] bg-[#ffffff] px-3 py-2 text-sm text-[#4e5a50]">{message}</p> : null}
+          <section className="hero-panel mx-auto max-w-2xl">
+            <p className="eyebrow">Access</p>
+            <h1 className="mt-2 text-3xl font-bold leading-tight">大会ページを開く</h1>
+            <p className="mt-3 text-sm leading-6 text-[#4e5a50]">
+              参加者名や試合情報を表示する前に、PINで確認します。参加者は参加者PIN、主催者は管理者PINを入力してください。
+            </p>
+            <form className="mt-6 grid gap-4" onSubmit={unlockTournamentAccess}>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button
+                  className={accessMode === "participant" ? "btn-primary" : "btn-ghost"}
+                  onClick={() => setAccessMode("participant")}
+                  type="button"
+                >
+                  参加者として開く
+                </button>
+                <button
+                  className={accessMode === "admin" ? "btn-primary" : "btn-ghost"}
+                  onClick={() => setAccessMode("admin")}
+                  type="button"
+                >
+                  管理者として開く
+                </button>
+              </div>
+              <label className="field">
+                {accessMode === "admin" ? "管理者PIN" : "参加者PIN"}
+                <input
+                  className="input"
+                  onChange={(event) => setAccessPin(event.target.value)}
+                  placeholder={accessMode === "admin" ? "管理者PINを入力" : "参加者PINを入力"}
+                  type="password"
+                  value={accessPin}
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button className="btn-primary min-w-36" disabled={isBusy} type="submit">
+                  {isBusy ? "確認中..." : "大会を開く"}
+                </button>
+                <a className="btn-ghost" href={`/t/${slug}/guide`}>
+                  参加者向け使い方
+                </a>
+              </div>
+            </form>
+          </section>
+        </div>
       </main>
     );
   }

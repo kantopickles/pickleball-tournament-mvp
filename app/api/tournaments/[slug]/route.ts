@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 export async function GET(_request: Request, { params }: { params: { slug: string } }) {
   const snapshot = await getSnapshot(params.slug);
   if (!snapshot) return jsonError("大会が見つかりません。", 404);
-  return NextResponse.json(snapshot);
+  return jsonError("この大会ページはPIN確認後に表示されます。", 403);
 }
 
 export async function DELETE(request: Request, { params }: { params: { slug: string } }) {
