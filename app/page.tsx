@@ -98,14 +98,13 @@ export default function HomePage() {
   return (
     <main className="app-shell">
       <section className="page-wrap">
-        <div className="hero-panel">
-          <p className="eyebrow">Pickle Draw MVP</p>
-          <h1 className="title-slice mt-3 text-3xl font-black leading-tight sm:text-4xl" data-text="Kanto Pickle's Drow">
-            Kanto Pickle&apos;s Drow
-          </h1>
-          <p className="mt-4 max-w-xl text-sm leading-6 text-[#4e5a50]">
-            参加者の方は大会一覧より該当試合を開いて下さい
-          </p>
+        <div className="overflow-hidden rounded-xl border border-[#d8dfd2] bg-[#ffffff] shadow-2xl shadow-black/10">
+          <h1 className="sr-only">Kanto Pickle&apos;s Drow</h1>
+          <img
+            alt="Kanto Pickle's Tournament Drow"
+            className="block aspect-[1672/941] w-full object-cover"
+            src="/kanto-pickles-hero.png"
+          />
         </div>
 
         {message ? <p className="rounded-md border border-[#d8dfd2] bg-[#ffffff] px-3 py-2 text-sm text-[#4e5a50]">{message}</p> : null}
