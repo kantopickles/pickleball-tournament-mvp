@@ -210,8 +210,8 @@ export default function TournamentScreen({ slug }: { slug: string }) {
 
   if (!snapshot) {
     return (
-      <main className="min-h-screen bg-[#111312] px-4 py-8 text-[#f4f6ef]">
-        <p className="mx-auto max-w-xl rounded-xl border border-[#30362f] bg-[#191c1a] p-4">読み込み中...</p>
+      <main className="min-h-screen bg-[#f7f8f3] px-4 py-8 text-[#1f261f]">
+        <p className="mx-auto max-w-xl rounded-xl border border-[#d8dfd2] bg-[#ffffff] p-4">読み込み中...</p>
       </main>
     );
   }
@@ -234,20 +234,20 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               <div className="mt-4 grid grid-cols-3 gap-2 sm:max-w-xl">
                 <div className="sub-panel">
                   <p className="text-xl font-bold text-[#42c884]">{snapshot.participants.length}</p>
-                  <p className="mt-1 text-xs text-[#a6ada4]">参加者</p>
+                  <p className="mt-1 text-xs text-[#6f7a70]">参加者</p>
                 </div>
                 <div className="sub-panel">
                   <p className="text-xl font-bold text-[#f5d35f]">{openCount}</p>
-                  <p className="mt-1 text-xs text-[#a6ada4]">未入力</p>
+                  <p className="mt-1 text-xs text-[#6f7a70]">未入力</p>
                 </div>
                 <div className="sub-panel">
                   <p className="text-xl font-bold text-[#f06f45]">{lockedCount}</p>
-                  <p className="mt-1 text-xs text-[#a6ada4]">入力済み</p>
+                  <p className="mt-1 text-xs text-[#6f7a70]">入力済み</p>
                 </div>
               </div>
             </div>
-            <div className="flex flex-col gap-2 rounded-lg border border-[#30362f] bg-[#111312]/75 p-3 text-sm lg:min-w-96">
-              <span className="break-all text-[#d5dbd0]">{shareUrl}</span>
+            <div className="flex flex-col gap-2 rounded-lg border border-[#d8dfd2] bg-[#f7f8f3]/75 p-3 text-sm lg:min-w-96">
+              <span className="break-all text-[#4e5a50]">{shareUrl}</span>
               <button
                 className="btn-warning"
                 onClick={() => void navigator.clipboard.writeText(shareUrl)}
@@ -274,7 +274,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
           </div>
         </header>
 
-        {message ? <p className="rounded-md border border-[#30362f] bg-[#191c1a] px-3 py-2 text-sm text-[#d5dbd0]">{message}</p> : null}
+        {message ? <p className="rounded-md border border-[#d8dfd2] bg-[#ffffff] px-3 py-2 text-sm text-[#4e5a50]">{message}</p> : null}
 
         {isAdminMode ? (
           <section className="grid gap-4 md:grid-cols-2">
@@ -365,16 +365,16 @@ export default function TournamentScreen({ slug }: { slug: string }) {
             ) : null}
           </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {snapshot.participants.length === 0 ? <p className="text-sm text-[#a6ada4]">まだ参加者はいません。</p> : null}
+            {snapshot.participants.length === 0 ? <p className="text-sm text-[#6f7a70]">まだ参加者はいません。</p> : null}
             {snapshot.participants.map((participant) => (
-              <div key={participant.id} className="flex items-center justify-between gap-3 rounded-lg border border-[#30362f] bg-[#111312]/80 px-3 py-3 text-sm">
+              <div key={participant.id} className="flex items-center justify-between gap-3 rounded-lg border border-[#d8dfd2] bg-[#f7f8f3]/80 px-3 py-3 text-sm">
                 <span className="min-w-0 truncate font-semibold">{participant.name}</span>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="rounded-full bg-[#20241f] px-2 py-1 text-xs text-[#a6ada4]">#{participant.seed}</span>
-                  {snapshot.tournament.format === "league" ? <span className="rounded-full bg-[#183327] px-2 py-1 text-xs text-[#42c884]">ブロック{participant.block_number}</span> : null}
+                  <span className="rounded-full bg-[#eef3ea] px-2 py-1 text-xs text-[#6f7a70]">#{participant.seed}</span>
+                  {snapshot.tournament.format === "league" ? <span className="rounded-full bg-[#dff4e8] px-2 py-1 text-xs text-[#42c884]">ブロック{participant.block_number}</span> : null}
                   {isAdminMode ? (
                     <button
-                      className="rounded border border-red-900/60 bg-[#191c1a] px-2 py-1 font-bold text-red-300 transition hover:bg-red-950/40 disabled:opacity-60"
+                      className="rounded border border-red-900/60 bg-[#ffffff] px-2 py-1 font-bold text-red-300 transition hover:bg-red-950/40 disabled:opacity-60"
                       disabled={isBusy || !adminPin}
                       onClick={() => void deleteParticipant(participant)}
                       type="button"
@@ -398,7 +398,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               <div key={group.offset} className="grid gap-2">
                 {isAdminMode ? (
                   <button
-                    className="justify-self-end rounded-md border border-red-900/60 bg-[#191c1a] px-3 py-2 text-sm font-bold text-red-300 transition hover:bg-red-950/40 disabled:opacity-60"
+                    className="justify-self-end rounded-md border border-red-900/60 bg-[#ffffff] px-3 py-2 text-sm font-bold text-red-300 transition hover:bg-red-950/40 disabled:opacity-60"
                     disabled={isBusy || !adminPin}
                     onClick={() => void deletePlayoff(group.offset, group.title)}
                     type="button"
@@ -440,7 +440,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                     </p>
                     <h3 className="mt-1 text-lg font-bold">{left} vs {right}</h3>
                   </div>
-                  <span className={`status-chip ${match.locked ? "border-[#42c884]/30 bg-[#183327] text-[#42c884]" : "border-[#f5d35f]/30 bg-[#332a16] text-[#f5d35f]"}`}>
+                  <span className={`status-chip ${match.locked ? "border-[#42c884]/30 bg-[#dff4e8] text-[#42c884]" : "border-[#f5d35f]/30 bg-[#fff3ca] text-[#f5d35f]"}`}>
                     {match.locked ? "ロック済み" : "未入力"}
                   </span>
                 </div>
@@ -448,7 +448,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 <div className="mt-4 grid gap-2">
                   {draft.map((score, gameIndex) => (
                     <div key={gameIndex} className="grid grid-cols-[4.5rem_1fr_auto_1fr] items-center gap-2">
-                      <span className="text-sm font-bold text-[#a6ada4]">G{gameIndex + 1}</span>
+                      <span className="text-sm font-bold text-[#6f7a70]">G{gameIndex + 1}</span>
                       <input
                         id={gameIndex === 0 ? `score-${match.id}-1` : undefined}
                         className="input min-w-0 text-center"
@@ -471,7 +471,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                     </div>
                   ))}
                   {snapshot.tournament.match_game_count > 1 ? (
-                    <p className="text-xs text-[#a6ada4]">
+                    <p className="text-xs text-[#6f7a70]">
                       合計: {match.participant1_score ?? 0} - {match.participant2_score ?? 0}
                     </p>
                   ) : null}
@@ -544,10 +544,10 @@ function Standings({ snapshot }: { snapshot: TournamentSnapshot }) {
           <div key={group.blockNumber} className="grid gap-2">
             {snapshot.tournament.format === "league" ? <h3 className="text-sm font-bold text-[#42c884]">ブロック{group.blockNumber}</h3> : null}
             {group.standings.map((standing) => (
-              <div key={standing.participantId} className="grid grid-cols-[2rem_1fr_auto] items-center gap-2 rounded-lg border border-[#30362f] bg-[#20241f] px-3 py-2 text-sm">
-                <span className="grid h-7 w-7 place-items-center rounded-md bg-[#183327] font-bold text-[#42c884]">{standing.rank}</span>
+              <div key={standing.participantId} className="grid grid-cols-[2rem_1fr_auto] items-center gap-2 rounded-lg border border-[#d8dfd2] bg-[#eef3ea] px-3 py-2 text-sm">
+                <span className="grid h-7 w-7 place-items-center rounded-md bg-[#dff4e8] font-bold text-[#42c884]">{standing.rank}</span>
                 <span className="font-semibold">{standing.name}</span>
-                <span className="text-[#d5dbd0]">{standing.wins}勝 / 得失{standing.pointDiff}</span>
+                <span className="text-[#4e5a50]">{standing.wins}勝 / 得失{standing.pointDiff}</span>
               </div>
             ))}
           </div>
@@ -578,19 +578,19 @@ function LeagueMatrix({
       <p className="eyebrow">League matrix</p>
       <h2 className="text-lg font-bold">リーグ表</h2>
       {snapshot.participants.length === 0 ? (
-        <p className="mt-3 text-sm text-[#a6ada4]">参加者を追加するとリーグ表が表示されます。</p>
+        <p className="mt-3 text-sm text-[#6f7a70]">参加者を追加するとリーグ表が表示されます。</p>
       ) : (
         <div className="mt-3 grid gap-5">
           {blocks.map((block) => (
             <div key={block.blockNumber}>
               {snapshot.tournament.format === "league" ? <h3 className="mb-2 text-sm font-bold text-[#42c884]">ブロック{block.blockNumber}</h3> : null}
-              <div className="overflow-x-auto rounded-lg border border-[#30362f] pb-2">
+              <div className="overflow-x-auto rounded-lg border border-[#d8dfd2] pb-2">
                 <table className="min-w-max border-collapse text-sm">
                   <thead>
                     <tr>
-                      <th className="sticky left-0 z-10 min-w-28 border border-[#30362f] bg-[#151816] px-2 py-2 text-left text-[#a6ada4]">名前</th>
+                      <th className="sticky left-0 z-10 min-w-28 border border-[#d8dfd2] bg-[#eef3ea] px-2 py-2 text-left text-[#6f7a70]">名前</th>
                       {block.participants.map((participant) => (
-                        <th key={participant.id} className="min-w-24 border border-[#30362f] bg-[#151816] px-2 py-2 text-center font-bold text-[#a6ada4]">
+                        <th key={participant.id} className="min-w-24 border border-[#d8dfd2] bg-[#eef3ea] px-2 py-2 text-center font-bold text-[#6f7a70]">
                           {participant.name}
                         </th>
                       ))}
@@ -599,13 +599,13 @@ function LeagueMatrix({
                   <tbody>
                     {block.participants.map((row) => (
                       <tr key={row.id}>
-                        <th className="sticky left-0 z-10 min-w-28 border border-[#30362f] bg-[#191c1a] px-2 py-2 text-left font-bold">
+                        <th className="sticky left-0 z-10 min-w-28 border border-[#d8dfd2] bg-[#ffffff] px-2 py-2 text-left font-bold">
                           {row.name}
                         </th>
                         {block.participants.map((column) => (
-                          <td key={column.id} className="h-14 min-w-24 border border-[#30362f] px-2 py-2 text-center">
+                          <td key={column.id} className="h-14 min-w-24 border border-[#d8dfd2] px-2 py-2 text-center">
                             {row.id === column.id ? (
-                              <span className="text-[#a6ada4]">-</span>
+                              <span className="text-[#6f7a70]">-</span>
                             ) : (
                               <LeagueCell
                                 rowId={row.id}
@@ -649,11 +649,11 @@ function LeagueCell({
       (item.participant1_id === columnId && item.participant2_id === rowId)
   );
 
-  if (!match) return <span className="text-[#a6ada4]">未</span>;
+  if (!match) return <span className="text-[#6f7a70]">未</span>;
   if (match.participant1_score === null || match.participant2_score === null) {
     return (
       <button
-        className="h-full w-full rounded bg-[#332a16] px-2 py-2 font-bold text-[#f5d35f] transition hover:bg-[#4a3916] focus:outline-none focus:ring-2 focus:ring-[#f06f45]"
+        className="h-full w-full rounded bg-[#fff3ca] px-2 py-2 font-bold text-[#f5d35f] transition hover:bg-[#ffe7a3] focus:outline-none focus:ring-2 focus:ring-[#f06f45]"
         onClick={() => onSelectMatch(match.id)}
         type="button"
       >
@@ -669,12 +669,12 @@ function LeagueCell({
 
   return (
     <button
-      className="h-full w-full rounded px-2 py-2 leading-tight transition hover:bg-[#183327] focus:outline-none focus:ring-2 focus:ring-[#42c884]"
+      className="h-full w-full rounded px-2 py-2 leading-tight transition hover:bg-[#dff4e8] focus:outline-none focus:ring-2 focus:ring-[#42c884]"
       onClick={() => onSelectMatch(match.id)}
       type="button"
     >
       <p className="font-bold">{result} {rowScore}-{columnScore}</p>
-      <p className="text-xs text-[#a6ada4]">{opponent}</p>
+      <p className="text-xs text-[#6f7a70]">{opponent}</p>
     </button>
   );
 }
@@ -727,15 +727,15 @@ function BracketMatch({
   const hasScore = match.participant1_score !== null && match.participant2_score !== null;
 
   return (
-    <div className="rounded-lg border border-[#30362f] bg-[#20241f] p-3 text-sm shadow-lg shadow-black/10">
-      <p className={`rounded px-2 py-1 ${match.winner_id === match.participant1_id ? "bg-[#183327] font-bold text-[#42c884]" : ""}`}>{left}</p>
-      <p className={`mt-1 rounded px-2 py-1 ${match.winner_id === match.participant2_id ? "bg-[#183327] font-bold text-[#42c884]" : ""}`}>{right}</p>
+    <div className="rounded-lg border border-[#d8dfd2] bg-[#eef3ea] p-3 text-sm shadow-lg shadow-black/10">
+      <p className={`rounded px-2 py-1 ${match.winner_id === match.participant1_id ? "bg-[#dff4e8] font-bold text-[#42c884]" : ""}`}>{left}</p>
+      <p className={`mt-1 rounded px-2 py-1 ${match.winner_id === match.participant2_id ? "bg-[#dff4e8] font-bold text-[#42c884]" : ""}`}>{right}</p>
       {isReady ? (
         <button
           className={`mt-2 w-full rounded px-2 py-2 font-bold transition focus:outline-none focus:ring-2 ${
             hasScore
-              ? "bg-[#191c1a] text-[#42c884] hover:bg-[#183327] focus:ring-[#42c884]"
-              : "bg-[#332a16] text-[#f5d35f] hover:bg-[#4a3916] focus:ring-[#f06f45]"
+              ? "bg-[#ffffff] text-[#42c884] hover:bg-[#dff4e8] focus:ring-[#42c884]"
+              : "bg-[#fff3ca] text-[#f5d35f] hover:bg-[#ffe7a3] focus:ring-[#f06f45]"
           }`}
           onClick={() => onSelectMatch(match.id)}
           type="button"
@@ -743,7 +743,7 @@ function BracketMatch({
           {hasScore ? `${match.participant1_score}-${match.participant2_score}` : "未入力"}
         </button>
       ) : (
-        <p className="mt-2 rounded bg-[#191c1a] px-2 py-2 text-center font-bold text-[#a6ada4]">未確定</p>
+        <p className="mt-2 rounded bg-[#ffffff] px-2 py-2 text-center font-bold text-[#6f7a70]">未確定</p>
       )}
     </div>
   );

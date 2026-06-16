@@ -103,12 +103,12 @@ export default function HomePage() {
           <h1 className="title-slice mt-3 text-3xl font-black leading-tight sm:text-4xl" data-text="Kanto Pickle's Drow">
             Kanto Pickle&apos;s Drow
           </h1>
-          <p className="mt-4 max-w-xl text-sm leading-6 text-[#d5dbd0]">
+          <p className="mt-4 max-w-xl text-sm leading-6 text-[#4e5a50]">
             参加者の方は大会一覧より該当試合を開いて下さい
           </p>
         </div>
 
-        {message ? <p className="rounded-md border border-[#30362f] bg-[#191c1a] px-3 py-2 text-sm text-[#d5dbd0]">{message}</p> : null}
+        {message ? <p className="rounded-md border border-[#d8dfd2] bg-[#ffffff] px-3 py-2 text-sm text-[#4e5a50]">{message}</p> : null}
 
         <section className="panel">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -116,16 +116,16 @@ export default function HomePage() {
               <p className="eyebrow">Tournaments</p>
               <h2 className="text-xl font-bold">大会一覧</h2>
             </div>
-            <p className="text-sm text-[#a6ada4]">開く、または作成用PINで削除できます。</p>
+            <p className="text-sm text-[#6f7a70]">開く、または作成用PINで削除できます。</p>
           </div>
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
-            {tournaments.length === 0 ? <p className="text-sm text-[#a6ada4]">まだ大会はありません。</p> : null}
+            {tournaments.length === 0 ? <p className="text-sm text-[#6f7a70]">まだ大会はありません。</p> : null}
             {tournaments.map((tournament) => (
-              <article key={tournament.id} className="rounded-lg border border-[#30362f] bg-[#111312]/80 p-3">
+              <article key={tournament.id} className="rounded-lg border border-[#d8dfd2] bg-[#f7f8f3]/80 p-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="font-bold">{tournament.name}</h3>
-                    <p className="text-sm text-[#a6ada4]">
+                    <p className="text-sm text-[#6f7a70]">
                       {formatLabels[tournament.format]}
                       {tournament.format === "league" ? ` / ${tournament.block_count}ブロック` : ""} /{" "}
                       {tournament.match_game_count ?? 1}本勝負 /{" "}
@@ -145,7 +145,7 @@ export default function HomePage() {
                     value={deletePins[tournament.slug] ?? ""}
                   />
                   <button
-                    className="rounded-md border border-red-900/60 bg-[#191c1a] px-3 py-2 text-sm font-bold text-red-300 transition hover:bg-red-950/40 disabled:opacity-60"
+                    className="rounded-md border border-red-900/60 bg-[#ffffff] px-3 py-2 text-sm font-bold text-red-300 transition hover:bg-red-950/40 disabled:opacity-60"
                     disabled={!deletePins[tournament.slug]}
                     onClick={() => void deleteTournament(tournament.slug)}
                     type="button"

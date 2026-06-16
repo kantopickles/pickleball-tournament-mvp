@@ -20,7 +20,7 @@ export default async function ParticipantGuidePage({ params }: { params: { slug:
         <header className="hero-panel">
           <p className="eyebrow">Participant guide</p>
           <h1 className="mt-2 text-3xl font-bold leading-tight">参加者向けの使い方</h1>
-          <p className="mt-3 text-sm leading-6 text-[#d5dbd0]">
+          <p className="mt-3 text-sm leading-6 text-[#4e5a50]">
             {snapshot.tournament.name} / {formatLabels[snapshot.tournament.format]} / {matchGameCount}本勝負
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -42,9 +42,9 @@ export default async function ParticipantGuidePage({ params }: { params: { slug:
               "参加者PINを入力します。",
               "「結果を保存」を押します。"
             ].map((text, index) => (
-              <div key={text} className="grid grid-cols-[2.25rem_1fr] gap-3 rounded-lg border border-[#30362f] bg-[#111312]/80 p-3">
-                <span className="grid h-9 w-9 place-items-center rounded-md bg-[#183327] font-bold text-[#42c884]">{index + 1}</span>
-                <p className="self-center text-sm leading-6 text-[#f4f6ef]">{text}</p>
+              <div key={text} className="grid grid-cols-[2.25rem_1fr] gap-3 rounded-lg border border-[#d8dfd2] bg-[#f7f8f3]/80 p-3">
+                <span className="grid h-9 w-9 place-items-center rounded-md bg-[#dff4e8] font-bold text-[#42c884]">{index + 1}</span>
+                <p className="self-center text-sm leading-6 text-[#1f261f]">{text}</p>
               </div>
             ))}
           </div>
@@ -54,7 +54,7 @@ export default async function ParticipantGuidePage({ params }: { params: { slug:
           <div className="panel">
             <p className="eyebrow">Important</p>
             <h2 className="text-lg font-bold">入力できる試合</h2>
-            <p className="mt-3 text-sm leading-6 text-[#d5dbd0]">
+            <p className="mt-3 text-sm leading-6 text-[#4e5a50]">
               参加者が入力できるのは「未入力」の試合だけです。入力済みの試合はロックされるので、間違えた場合は大会管理者に連絡してください。
             </p>
           </div>
@@ -62,7 +62,7 @@ export default async function ParticipantGuidePage({ params }: { params: { slug:
           <div className="panel">
             <p className="eyebrow">PIN</p>
             <h2 className="text-lg font-bold">参加者PINについて</h2>
-            <p className="mt-3 text-sm leading-6 text-[#d5dbd0]">
+            <p className="mt-3 text-sm leading-6 text-[#4e5a50]">
               使うのは参加者PINだけです。管理者PINは大会管理者専用なので、参加者は入力しません。
             </p>
           </div>
@@ -71,7 +71,7 @@ export default async function ParticipantGuidePage({ params }: { params: { slug:
         <section className="panel">
           <p className="eyebrow">Check</p>
           <h2 className="text-lg font-bold">入力後の確認</h2>
-          <p className="mt-3 text-sm leading-6 text-[#d5dbd0]">
+          <p className="mt-3 text-sm leading-6 text-[#4e5a50]">
             保存できると、その試合は「ロック済み」になります。総当たり・リーグ戦では順位表も自動で更新されます。
           </p>
         </section>

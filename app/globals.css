@@ -3,16 +3,16 @@
 @tailwind utilities;
 
 :root {
-  color: #f4f6ef;
-  background: #111312;
-  --bg: #101211;
-  --surface: #181b19;
-  --surface-strong: #20241f;
-  --line: #30362f;
-  --muted: #a6ada4;
-  --text: #f4f6ef;
+  color: #1f261f;
+  background: #f7f8f3;
+  --bg: #f7f8f3;
+  --surface: #ffffff;
+  --surface-strong: #eef3ea;
+  --line: #d8dfd2;
+  --muted: #6f7a70;
+  --text: #1f261f;
   --green: #42c884;
-  --green-soft: #183327;
+  --green-soft: #dff4e8;
   --yellow: #f5d35f;
   --orange: #f06f45;
 }
@@ -28,7 +28,7 @@ body {
     radial-gradient(circle at top left, rgba(66, 200, 132, 0.2), transparent 28rem),
     radial-gradient(circle at 90% 10%, rgba(240, 111, 69, 0.12), transparent 22rem),
     radial-gradient(circle at bottom right, rgba(245, 211, 95, 0.12), transparent 26rem),
-    #111312;
+    #f7f8f3;
   color: var(--text);
 }
 
@@ -40,22 +40,22 @@ button {
 
 input,
 select {
-  background: #111312;
-  color: #f4f6ef;
+  background: #f7f8f3;
+  color: #1f261f;
 }
 
 input::placeholder {
-  color: #7f887e;
+  color: #8b948a;
 }
 
 select option {
-  background: #191c1a;
-  color: #f4f6ef;
+  background: #ffffff;
+  color: #1f261f;
 }
 
 @layer components {
   .app-shell {
-    @apply min-h-screen px-4 py-5 text-[#f4f6ef] sm:px-6 lg:px-8;
+    @apply min-h-screen px-4 py-5 text-[#1f261f] sm:px-6 lg:px-8;
   }
 
   .page-wrap {
@@ -63,23 +63,23 @@ select option {
   }
 
   .hero-panel {
-    @apply overflow-hidden rounded-xl border border-[#30362f] bg-[linear-gradient(135deg,rgba(66,200,132,0.24),rgba(245,211,95,0.09)_48%,rgba(240,111,69,0.12)),#191c1a] p-5 shadow-2xl shadow-black/20;
+    @apply overflow-hidden rounded-xl border border-[#d8dfd2] bg-[linear-gradient(135deg,rgba(66,200,132,0.24),rgba(245,211,95,0.09)_48%,rgba(240,111,69,0.12)),#ffffff] p-5 shadow-2xl shadow-black/20;
   }
 
   .panel {
-    @apply rounded-xl border border-[#30362f] bg-[#191c1a]/95 p-4 shadow-xl shadow-black/10;
+    @apply rounded-xl border border-[#d8dfd2] bg-[#ffffff]/95 p-4 shadow-xl shadow-black/10;
   }
 
   .sub-panel {
-    @apply rounded-lg border border-[#30362f] bg-[#111312]/80 p-3;
+    @apply rounded-lg border border-[#d8dfd2] bg-[#f7f8f3]/80 p-3;
   }
 
   .field {
-    @apply flex flex-col gap-2 text-sm font-semibold text-[#f4f6ef];
+    @apply flex flex-col gap-2 text-sm font-semibold text-[#1f261f];
   }
 
   .input {
-    @apply rounded-md border border-[#30362f] bg-[#111312] px-3 py-3 font-normal text-[#f4f6ef] outline-none transition focus:border-[#42c884] focus:ring-2 focus:ring-[#42c884]/20;
+    @apply rounded-md border border-[#d8dfd2] bg-[#f7f8f3] px-3 py-3 font-normal text-[#1f261f] outline-none transition focus:border-[#42c884] focus:ring-2 focus:ring-[#42c884]/20;
   }
 
   .btn-primary {
@@ -91,19 +91,19 @@ select option {
   }
 
   .btn-ghost {
-    @apply rounded-md border border-[#30362f] bg-[#20241f] px-3 py-2 text-center text-sm font-bold text-[#f4f6ef] transition hover:border-[#42c884]/60 hover:bg-[#263027] disabled:opacity-60;
+    @apply rounded-md border border-[#d8dfd2] bg-[#eef3ea] px-3 py-2 text-center text-sm font-bold text-[#1f261f] transition hover:border-[#42c884]/60 hover:bg-[#e5f1e8] disabled:opacity-60;
   }
 
   .btn-warning {
-    @apply rounded-md bg-[#f5d35f] px-3 py-2 text-center font-bold text-[#111312] transition hover:bg-[#ffe17b] disabled:opacity-60;
+    @apply rounded-md bg-[#f5d35f] px-3 py-2 text-center font-bold text-[#1f261f] transition hover:bg-[#ffe17b] disabled:opacity-60;
   }
 
   .eyebrow {
-    @apply text-sm font-semibold text-[#f5d35f];
+    @apply text-sm font-semibold text-[#d96a22];
   }
 
   .muted {
-    @apply text-[#a6ada4];
+    @apply text-[#6f7a70];
   }
 
   .status-chip {
@@ -111,13 +111,13 @@ select option {
   }
 
   .title-slice {
-    color: #f4f6ef;
+    color: #1f261f;
     position: relative;
   }
 
   .title-slice::after {
     content: attr(data-text);
-    color: #f5d35f;
+    color: #f06f45;
     left: 0;
     position: absolute;
     top: 0;
