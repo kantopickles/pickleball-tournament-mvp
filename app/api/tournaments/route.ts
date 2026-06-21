@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api";
-import { createSlug, hashPin } from "@/lib/pins";
+import { createSlug, hashPin, isFourDigitPin } from "@/lib/pins";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import type { TournamentFormat } from "@/lib/types";
 
@@ -46,8 +46,8 @@ export async function POST(request: Request) {
   if (requiredCreatorPin && creatorPin !== requiredCreatorPin) return jsonError("作成用PINが違います。", 403);
   if (!name) return jsonError("大会名を入力してください。");
   if (!body.format || !formats.includes(body.format)) return jsonError("大会形式を選んでください。");
-  if (!adminPin || adminPin.length < 4) return jsonError("管理者PINは4文字以上にしてください。");
-  if (!participantPin || participantPin.length < 4) return jsonError("参加者PINは4文字以上にしてください。");
+  if (!adminPin || !isFourDigitPin(adminPin)) return jsonError("管理者PINは4桁の数字にしてください。");
+  if (!participantPin || !isFourDigitPin(participantPin)) return jsonError("参加者PINは4桁の数字にしてください。");
   if (body.format === "league" && (!Number.isInteger(blockCount) || blockCount < 2 || blockCount > 8)) {
     return jsonError("リーグ戦のブロック数は2〜8で選んでください。");
   }

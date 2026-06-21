@@ -4,6 +4,10 @@ export function hashPin(pin: string) {
   return createHash("sha256").update(pin.trim()).digest("hex");
 }
 
+export function isFourDigitPin(pin: string) {
+  return /^\d{4}$/.test(pin.trim());
+}
+
 export function createSlug() {
   return randomUUID().split("-")[0];
 }

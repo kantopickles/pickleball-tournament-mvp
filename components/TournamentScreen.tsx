@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
 import type { Match, PublicParticipant, TournamentFormat, TournamentSnapshot } from "@/lib/types";
 
 const formatLabels: Record<TournamentFormat, string> = {
@@ -11,8 +12,15 @@ const formatLabels: Record<TournamentFormat, string> = {
 
 type ScoreDraft = Record<string, Array<{ participant1Score: string; participant2Score: string }>>;
 type SwapDraft = Record<string, { participant1Id: string; participant2Id: string }>;
+type InlineMessage = {
+  text: string;
+  tone: "error" | "success";
+  scope: "access" | "participant" | "admin" | "matches";
+};
 
 export default function TournamentScreen({ slug }: { slug: string }) {
+  useRevealOnScroll();
+  const normalizePin = (value: string) => value.replace(/\D/g, "").slice(0, 4);
   const [snapshot, setSnapshot] = useState<TournamentSnapshot | null>(null);
   const [accessPin, setAccessPin] = useState("");
   const [accessMode, setAccessMode] = useState<"participant" | "admin">("participant");
@@ -23,7 +31,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const [activeParticipantId, setActiveParticipantId] = useState("");
   const [participantName, setParticipantName] = useState("");
   const [commonParticipantPin, setCommonParticipantPin] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<InlineMessage | null>(null);
   const [scoreDraft, setScoreDraft] = useState<ScoreDraft>({});
   const [swapDraft, setSwapDraft] = useState<SwapDraft>({});
   const [playoffRankStart, setPlayoffRankStart] = useState(1);
@@ -39,9 +47,46 @@ export default function TournamentScreen({ slug }: { slug: string }) {
 
   const shareUrl = typeof window === "undefined" ? "" : `${window.location.origin}/t/${slug}`;
 
-  async function requestSnapshot(path: string, init: RequestInit) {
+  const friendlyMessage = (text: string, fallback: string) => {
+    switch (text) {
+      case "管理者PINを入力してください。":
+        return "管理者PINを入れてから進めてください。";
+      case "参加者PINを入力してください。":
+        return "参加者PINを入れてから進めてください。";
+      case "管理者PINが違います。":
+        return "管理者PINが合っていないようです。もう一度確認してください。";
+      case "参加者PINが違います。":
+        return "参加者PINが合っていないようです。もう一度確認してください。";
+      case "参加者PINは4桁の数字にしてください。":
+        return "参加者PINは4桁の数字で入力してください。";
+      case "この大会ページはPIN確認後に表示されます。":
+        return "この大会は、PINを確認してから開けるようになっています。";
+      case "参加者を選択してください。":
+        return "参加者名を選んでから進めてください。";
+      case "参加者PINと参加者名を選択してください。":
+        return "参加者PINを入れて、参加者名を選んでください。";
+      case "ログインできませんでした。":
+        return "ログインできませんでした。入力内容を確認して、もう一度お試しください。";
+      case "大会を開けませんでした。":
+        return "大会を開けませんでした。入力内容を確認して、もう一度お試しください。";
+      case "処理に失敗しました。":
+        return "うまく処理できませんでした。もう一度お試しください。";
+      default:
+        return text || fallback;
+    }
+  };
+
+  function showMessage(scope: InlineMessage["scope"], tone: InlineMessage["tone"], text: string, fallback: string) {
+    setMessage({
+      scope,
+      tone,
+      text: tone === "error" ? friendlyMessage(text, fallback) : text
+    });
+  }
+
+  async function requestSnapshot(path: string, init: RequestInit, scope: InlineMessage["scope"]) {
     setIsBusy(true);
-    setMessage("");
+    setMessage(null);
     const response = await fetch(path, {
       ...init,
       headers: { "Content-Type": "application/json", ...(init.headers ?? {}) }
@@ -50,7 +95,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     setIsBusy(false);
 
     if (!response.ok) {
-      setMessage("error" in payload ? payload.error : "処理に失敗しました。");
+      showMessage(scope, "error", "error" in payload ? payload.error : "処理に失敗しました。", "うまく処理できませんでした。");
       return false;
     }
 
@@ -61,12 +106,17 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   async function unlockTournamentAccess(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!accessPin) {
-      setMessage(accessMode === "admin" ? "管理者PINを入力してください。" : "参加者PINを入力してください。");
+      showMessage(
+        "access",
+        "error",
+        accessMode === "admin" ? "管理者PINを入力してください。" : "参加者PINを入力してください。",
+        "PINを入力してください。"
+      );
       return;
     }
 
     setIsBusy(true);
-    setMessage("");
+    setMessage(null);
     const response = await fetch(`/api/tournaments/${slug}/access`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -78,7 +128,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     setIsBusy(false);
 
     if (!response.ok || !("snapshot" in payload)) {
-      setMessage("error" in payload ? payload.error : "大会を開けませんでした。");
+      showMessage("access", "error", "error" in payload ? payload.error : "大会を開けませんでした。", "大会を開けませんでした。");
       return;
     }
 
@@ -94,7 +144,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     }
 
     setAccessPin("");
-    setMessage("");
+    setMessage(null);
   }
 
   async function addParticipant(event: FormEvent<HTMLFormElement>) {
@@ -102,10 +152,10 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     const ok = await requestSnapshot(`/api/tournaments/${slug}/participants`, {
       method: "POST",
       body: JSON.stringify({ adminPin, name: participantName })
-    });
+    }, "admin");
     if (ok) {
       setParticipantName("");
-      setMessage("参加者を追加しました。");
+      showMessage("admin", "success", "参加者を追加しました。", "");
     }
   }
 
@@ -113,26 +163,26 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     const ok = await requestSnapshot(`/api/tournaments/${slug}/participants/${participant.id}`, {
       method: "DELETE",
       body: JSON.stringify({ adminPin })
-    });
-    if (ok) setMessage(`${participant.name}を削除しました。`);
+    }, "admin");
+    if (ok) showMessage("admin", "success", `${participant.name}を削除しました。`, "");
   }
 
   async function generateDraw() {
     const ok = await requestSnapshot(`/api/tournaments/${slug}/generate`, {
       method: "POST",
       body: JSON.stringify({ adminPin })
-    });
-    if (ok) setMessage("ドロー表を生成しました。");
+    }, "admin");
+    if (ok) showMessage("admin", "success", "ドロー表を生成しました。", "");
   }
 
   async function updateParticipantPin() {
     const ok = await requestSnapshot(`/api/tournaments/${slug}/participant-pin`, {
       method: "PATCH",
       body: JSON.stringify({ adminPin, participantPin: commonParticipantPin })
-    });
+    }, "admin");
     if (ok) {
       setCommonParticipantPin("");
-      setMessage("参加者PINを更新しました。");
+      showMessage("admin", "success", "参加者PINを更新しました。", "");
     }
   }
 
@@ -140,21 +190,21 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     const ok = await requestSnapshot(`/api/tournaments/${slug}/playoff`, {
       method: "POST",
       body: JSON.stringify({ adminPin, rankStart: playoffRankStart, rankEnd: playoffRankEnd })
-    });
-    if (ok) setMessage(`${playoffTitle(playoffRankStart, playoffRankEnd)}を作成しました。`);
+    }, "admin");
+    if (ok) showMessage("admin", "success", `${playoffTitle(playoffRankStart, playoffRankEnd)}を作成しました。`, "");
   }
 
   async function deletePlayoff(offset: number, title: string) {
     const ok = await requestSnapshot(`/api/tournaments/${slug}/playoff/${offset}`, {
       method: "DELETE",
       body: JSON.stringify({ adminPin })
-    });
-    if (ok) setMessage(`${title}を削除しました。`);
+    }, "admin");
+    if (ok) showMessage("admin", "success", `${title}を削除しました。`, "");
   }
 
   async function saveResult(match: Match) {
     const draft = getScoreDraft(match);
-    await requestSnapshot(`/api/tournaments/${slug}/matches/${match.id}`, {
+    const ok = await requestSnapshot(`/api/tournaments/${slug}/matches/${match.id}`, {
       method: "PATCH",
       body: JSON.stringify({
         mode: "result",
@@ -167,18 +217,19 @@ export default function TournamentScreen({ slug }: { slug: string }) {
           participant2Score: Number(score.participant2Score)
         }))
       })
-    });
+    }, "matches");
+    if (ok) showMessage("matches", "success", "結果を保存しました。", "");
   }
 
   async function loginParticipant(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!loginParticipantPin || !selectedParticipantId) {
-      setMessage("参加者PINと参加者名を選択してください。");
+      showMessage("participant", "error", "参加者PINと参加者名を選択してください。", "参加者情報を確認してください。");
       return;
     }
 
     setIsBusy(true);
-    setMessage("");
+    setMessage(null);
     const response = await fetch(`/api/tournaments/${slug}/participant-login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -188,13 +239,13 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     setIsBusy(false);
 
     if (!response.ok || !payload.ok) {
-      setMessage(payload.error ?? "ログインできませんでした。");
+      showMessage("participant", "error", payload.error ?? "ログインできませんでした。", "ログインできませんでした。");
       return;
     }
 
     setParticipantPin(loginParticipantPin);
     setActiveParticipantId(selectedParticipantId);
-    setMessage("");
+    showMessage("participant", "success", "ログインできました。自分の試合だけ入力できます。", "");
   }
 
   function logoutParticipant() {
@@ -203,10 +254,11 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   }
 
   async function unlockMatch(match: Match) {
-    await requestSnapshot(`/api/tournaments/${slug}/matches/${match.id}`, {
+    const ok = await requestSnapshot(`/api/tournaments/${slug}/matches/${match.id}`, {
       method: "PATCH",
       body: JSON.stringify({ mode: "unlock", pin: adminPin })
-    });
+    }, "matches");
+    if (ok) showMessage("matches", "success", "試合のロックを解除しました。", "");
   }
 
   async function swapMatch(match: Match) {
@@ -215,7 +267,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
       participant2Id: match.participant2_id ?? ""
     };
 
-    await requestSnapshot(`/api/tournaments/${slug}/matches/${match.id}`, {
+    const ok = await requestSnapshot(`/api/tournaments/${slug}/matches/${match.id}`, {
       method: "PATCH",
       body: JSON.stringify({
         mode: "swap",
@@ -223,7 +275,8 @@ export default function TournamentScreen({ slug }: { slug: string }) {
         participant1Id: draft.participant1Id || null,
         participant2Id: draft.participant2Id || null
       })
-    });
+    }, "matches");
+    if (ok) showMessage("matches", "success", "対戦カードを更新しました。", "");
   }
 
   function focusMatch(matchId: string) {
@@ -275,11 +328,10 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     return (
       <main className="app-shell">
         <div className="page-wrap">
-          {message ? <p className="rounded-md border border-[#d8dfd2] bg-[#ffffff] px-3 py-2 text-sm text-[#4e5a50]">{message}</p> : null}
-          <section className="hero-panel mx-auto max-w-2xl">
+          <section className="hero-panel mx-auto max-w-2xl" data-reveal>
             <p className="eyebrow">Access</p>
             <h1 className="mt-2 text-3xl font-bold leading-tight">大会ページを開く</h1>
-            <p className="mt-3 text-sm leading-6 text-[#4e5a50]">
+            <p className="mt-3 text-sm leading-6 text-[#6f7b94]">
               参加者名や試合情報を表示する前に、PINで確認します。参加者は参加者PIN、主催者は管理者PINを入力してください。
             </p>
             <form className="mt-6 grid gap-4" onSubmit={unlockTournamentAccess}>
@@ -303,20 +355,26 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 {accessMode === "admin" ? "管理者PIN" : "参加者PIN"}
                 <input
                   className="input"
-                  onChange={(event) => setAccessPin(event.target.value)}
-                  placeholder={accessMode === "admin" ? "管理者PINを入力" : "参加者PINを入力"}
+                  inputMode="numeric"
+                  maxLength={4}
+                  onChange={(event) => setAccessPin(normalizePin(event.target.value))}
+                  pattern="[0-9]{4}"
+                  placeholder="4桁の数字を入力"
                   type="password"
                   value={accessPin}
                 />
               </label>
               <div className="flex flex-wrap gap-2">
                 <button className="btn-primary min-w-36" disabled={isBusy} type="submit">
-                  {isBusy ? "確認中..." : "大会を開く"}
+                  {isBusy ? "確認中..." : "ログイン"}
                 </button>
                 <a className="btn-ghost" href={`/t/${slug}/guide`}>
                   参加者向け使い方
                 </a>
               </div>
+              {message?.scope === "access" ? (
+                <p className={`system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>{message.text}</p>
+              ) : null}
             </form>
           </section>
         </div>
@@ -336,28 +394,28 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   return (
     <main className="app-shell">
       <div className="page-wrap">
-        <header className="hero-panel">
+        <header className="hero-panel" data-reveal>
           <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
             <div>
               <p className="eyebrow">{formatLabels[snapshot.tournament.format]}</p>
               <h1 className="mt-2 text-3xl font-bold leading-tight">{snapshot.tournament.name}</h1>
               <div className="mt-4 grid grid-cols-3 gap-2 sm:max-w-xl">
                 <div className="sub-panel">
-                  <p className="text-xl font-bold text-[#42c884]">{snapshot.participants.length}</p>
-                  <p className="mt-1 text-xs text-[#6f7a70]">参加者</p>
+                  <p className="text-xl font-bold text-[#5a5df0]">{snapshot.participants.length}</p>
+                  <p className="mt-1 text-xs text-[#6f7b94]">参加者</p>
                 </div>
                 <div className="sub-panel">
-                  <p className="text-xl font-bold text-[#f5d35f]">{openCount}</p>
-                  <p className="mt-1 text-xs text-[#6f7a70]">未入力</p>
+                  <p className="text-xl font-bold text-[#f1b84b]">{openCount}</p>
+                  <p className="mt-1 text-xs text-[#6f7b94]">未入力</p>
                 </div>
                 <div className="sub-panel">
-                  <p className="text-xl font-bold text-[#f06f45]">{lockedCount}</p>
-                  <p className="mt-1 text-xs text-[#6f7a70]">入力済み</p>
+                  <p className="text-xl font-bold text-[#34bf84]">{lockedCount}</p>
+                  <p className="mt-1 text-xs text-[#6f7b94]">入力済み</p>
                 </div>
               </div>
             </div>
-            <div className="flex flex-col gap-2 rounded-lg border border-[#d8dfd2] bg-[#f7f8f3]/75 p-3 text-sm lg:min-w-96">
-              <span className="break-all text-[#4e5a50]">{shareUrl}</span>
+            <div className="flex flex-col gap-2 rounded-[24px] surface-band p-3 text-sm lg:min-w-96">
+              <span className="break-all text-[#6f7b94]">{shareUrl}</span>
               <button
                 className="btn-warning"
                 onClick={() => void navigator.clipboard.writeText(shareUrl)}
@@ -384,13 +442,11 @@ export default function TournamentScreen({ slug }: { slug: string }) {
           </div>
         </header>
 
-        {message ? <p className="rounded-md border border-[#d8dfd2] bg-[#ffffff] px-3 py-2 text-sm text-[#4e5a50]">{message}</p> : null}
-
         {!isAdminMode && !isParticipantLoggedIn ? (
-          <section className="panel">
+          <section className="panel" data-reveal>
             <p className="eyebrow">Participant login</p>
             <h2 className="mt-1 text-xl font-bold">参加者ログイン</h2>
-            <p className="mt-3 text-sm leading-6 text-[#4e5a50]">
+            <p className="mt-3 text-sm leading-6 text-[#6f7b94]">
               参加者PINを入力し、自分の名前を選んでください。ログイン後は、自分の名前が入っている試合だけ結果入力できます。
             </p>
             <form onSubmit={loginParticipant} className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
@@ -399,8 +455,11 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 <input
                   className="input"
                   value={loginParticipantPin}
-                  onChange={(event) => setLoginParticipantPin(event.target.value)}
-                  placeholder="大会管理者から共有されたPIN"
+                  inputMode="numeric"
+                  maxLength={4}
+                  onChange={(event) => setLoginParticipantPin(normalizePin(event.target.value))}
+                  pattern="[0-9]{4}"
+                  placeholder="4桁の数字"
                   type="password"
                 />
               </label>
@@ -419,18 +478,21 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 {isBusy ? "確認中..." : "入る"}
               </button>
             </form>
+            {message?.scope === "participant" ? (
+              <p className={`mt-3 system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>{message.text}</p>
+            ) : null}
             {snapshot.participants.length === 0 ? (
-              <p className="mt-3 text-sm text-[#6f7a70]">まだ参加者が登録されていません。大会管理者に確認してください。</p>
+              <p className="mt-3 text-sm text-[#6f7b94]">まだ参加者が登録されていません。大会管理者に確認してください。</p>
             ) : null}
           </section>
         ) : null}
 
         {!isAdminMode && isParticipantLoggedIn && activeParticipant ? (
-          <section className="panel flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <section className="panel flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" data-reveal>
             <div>
               <p className="eyebrow">Logged in</p>
               <h2 className="text-lg font-bold">{activeParticipant.name}として入力中</h2>
-              <p className="mt-1 text-sm text-[#4e5a50]">この参加者が含まれる未入力試合だけ保存できます。</p>
+              <p className="mt-1 text-sm text-[#6f7b94]">この参加者が含まれる未入力試合だけ保存できます。</p>
             </div>
             <button className="btn-ghost" onClick={logoutParticipant} type="button">
               参加者を変更
@@ -439,23 +501,35 @@ export default function TournamentScreen({ slug }: { slug: string }) {
         ) : null}
 
         {isAdminMode ? (
-          <section className="grid gap-4 md:grid-cols-2">
+          <section className="grid gap-4 md:grid-cols-2" data-reveal>
             <form onSubmit={addParticipant} className="panel">
               <p className="eyebrow">Admin</p>
               <h2 className="mt-1 text-lg font-bold">管理者メニュー</h2>
               <div className="mt-3 grid gap-3">
                 <label className="field">
                   管理者PIN
-                  <input className="input" value={adminPin} onChange={(event) => setAdminPin(event.target.value)} type="password" />
+                  <input
+                    className="input"
+                    inputMode="numeric"
+                    maxLength={4}
+                    onChange={(event) => setAdminPin(normalizePin(event.target.value))}
+                    pattern="[0-9]{4}"
+                    placeholder="4桁の数字"
+                    type="password"
+                    value={adminPin}
+                  />
                 </label>
                 <div className="sub-panel grid gap-2">
                   <label className="field">
                     参加者共通PINを変更
                     <input
                       className="input"
+                      inputMode="numeric"
+                      maxLength={4}
                       value={commonParticipantPin}
-                      onChange={(event) => setCommonParticipantPin(event.target.value)}
-                      placeholder="4文字以上"
+                      onChange={(event) => setCommonParticipantPin(normalizePin(event.target.value))}
+                      pattern="[0-9]{4}"
+                      placeholder="4桁の数字"
                       type="password"
                     />
                   </label>
@@ -510,11 +584,14 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                   </div>
                 ) : null}
               </div>
+              {message?.scope === "admin" ? (
+                <p className={`system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>{message.text}</p>
+              ) : null}
             </form>
           </section>
         ) : null}
 
-        <section className="panel">
+        <section className="panel" data-reveal>
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="eyebrow">Players</p>
@@ -527,16 +604,16 @@ export default function TournamentScreen({ slug }: { slug: string }) {
             ) : null}
           </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {snapshot.participants.length === 0 ? <p className="text-sm text-[#6f7a70]">まだ参加者はいません。</p> : null}
+            {snapshot.participants.length === 0 ? <p className="text-sm text-[#6f7b94]">まだ参加者はいません。</p> : null}
             {snapshot.participants.map((participant) => (
-              <div key={participant.id} className="flex items-center justify-between gap-3 rounded-lg border border-[#d8dfd2] bg-[#f7f8f3]/80 px-3 py-3 text-sm">
+              <div key={participant.id} className="flex items-center justify-between gap-3 rounded-[24px] border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.92)] px-3 py-3 text-sm">
                 <span className="min-w-0 truncate font-semibold">{participant.name}</span>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="rounded-full bg-[#eef3ea] px-2 py-1 text-xs text-[#6f7a70]">#{participant.seed}</span>
-                  {snapshot.tournament.format === "league" ? <span className="rounded-full bg-[#dff4e8] px-2 py-1 text-xs text-[#42c884]">ブロック{participant.block_number}</span> : null}
+                  <span className="rounded-full bg-[rgba(243,246,255,0.94)] px-2 py-1 text-xs text-[#6f7b94]">#{participant.seed}</span>
+                  {snapshot.tournament.format === "league" ? <span className="rounded-full bg-[rgba(90,93,240,0.1)] px-2 py-1 text-xs text-[#5a5df0]">ブロック{participant.block_number}</span> : null}
                   {isAdminMode ? (
                     <button
-                      className="rounded border border-red-900/60 bg-[#ffffff] px-2 py-1 font-bold text-red-300 transition hover:bg-red-950/40 disabled:opacity-60"
+                      className="rounded btn-danger-ghost px-2 py-1"
                       disabled={isBusy || !adminPin}
                       onClick={() => void deleteParticipant(participant)}
                       type="button"
@@ -566,7 +643,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               <div key={group.offset} className="grid gap-2">
                 {isAdminMode ? (
                   <button
-                    className="justify-self-end rounded-md border border-red-900/60 bg-[#ffffff] px-3 py-2 text-sm font-bold text-red-300 transition hover:bg-red-950/40 disabled:opacity-60"
+                    className="btn-danger-ghost justify-self-end px-3 py-2 text-sm"
                     disabled={isBusy || !adminPin}
                     onClick={() => void deletePlayoff(group.offset, group.title)}
                     type="button"
@@ -587,12 +664,15 @@ export default function TournamentScreen({ slug }: { slug: string }) {
           </>
         )}
 
-        <section className="flex flex-col gap-3">
+        <section className="flex flex-col gap-3" data-reveal>
           <div>
             <p className="eyebrow">Matches</p>
             <h2 className="text-xl font-bold">試合</h2>
           </div>
           {snapshot.matches.length === 0 ? <p className="panel text-sm">ドローを生成すると試合が表示されます。</p> : null}
+          {message?.scope === "matches" ? (
+            <p className={`system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>{message.text}</p>
+          ) : null}
           {snapshot.matches.map((match) => {
             const left = match.participant1_id ? participantById.get(match.participant1_id)?.name : "未定";
             const right = match.participant2_id ? participantById.get(match.participant2_id)?.name : "未定";
@@ -603,14 +683,14 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               <article id={`match-${match.id}`} key={match.id} className="panel scroll-mt-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-[#42c884]">
+                    <p className="text-sm font-semibold text-[#5a5df0]">
                       {snapshot.tournament.format === "league" && match.round >= 100
                         ? `${playoffTitleFromRound(match.round)} R${playoffRoundNumber(match.round)} / ${match.position}`
                         : `R${match.round} / ${match.position}`}
                     </p>
                     <h3 className="mt-1 text-lg font-bold">{left} vs {right}</h3>
                   </div>
-                  <span className={`status-chip ${match.locked ? "border-[#42c884]/30 bg-[#dff4e8] text-[#42c884]" : "border-[#f5d35f]/30 bg-[#fff3ca] text-[#f5d35f]"}`}>
+                  <span className={`status-chip ${match.locked ? "border-[rgba(52,191,132,0.24)] bg-[rgba(52,191,132,0.12)] text-[#34bf84]" : "border-[rgba(241,184,75,0.28)] bg-[rgba(241,184,75,0.14)] text-[#c58a20]"}`}>
                     {match.locked ? "ロック済み" : "未入力"}
                   </span>
                 </div>
@@ -618,7 +698,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 <div className="mt-4 grid gap-2">
                   {draft.map((score, gameIndex) => (
                     <div key={gameIndex} className="grid grid-cols-[4.5rem_1fr_auto_1fr] items-center gap-2">
-                      <span className="text-sm font-bold text-[#6f7a70]">G{gameIndex + 1}</span>
+                      <span className="text-sm font-bold text-[#6f7b94]">G{gameIndex + 1}</span>
                       <input
                         id={gameIndex === 0 ? `score-${match.id}-1` : undefined}
                         className="input min-w-0 text-center"
@@ -641,14 +721,14 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                     </div>
                   ))}
                   {snapshot.tournament.match_game_count > 1 ? (
-                    <p className="text-xs text-[#6f7a70]">
+                    <p className="text-xs text-[#6f7b94]">
                       合計: {match.participant1_score ?? 0} - {match.participant2_score ?? 0}
                     </p>
                   ) : null}
                 </div>
 
                 {!isAdminMode && !canSaveMatch ? (
-                  <p className="mt-4 rounded-md border border-[#d8dfd2] bg-[#f7f8f3] px-3 py-2 text-sm text-[#4e5a50]">
+                  <p className="mt-4 rounded-2xl border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.92)] px-3 py-2 text-sm text-[#6f7b94]">
                     {isParticipantLoggedIn ? "選択した参加者が含まれる試合だけ入力できます。" : "結果入力するには、上の参加者ログインをしてください。"}
                   </p>
                 ) : null}
@@ -705,12 +785,12 @@ function Standings({ snapshot }: { snapshot: TournamentSnapshot }) {
       <div className="mt-3 grid gap-4">
         {groups.map((group) => (
           <div key={group.blockNumber} className="grid gap-2">
-            {snapshot.tournament.format === "league" ? <h3 className="text-sm font-bold text-[#42c884]">ブロック{group.blockNumber}</h3> : null}
+            {snapshot.tournament.format === "league" ? <h3 className="text-sm font-bold text-[#5a5df0]">ブロック{group.blockNumber}</h3> : null}
             {group.standings.map((standing) => (
-              <div key={standing.participantId} className="grid grid-cols-[2rem_1fr_auto] items-center gap-2 rounded-lg border border-[#d8dfd2] bg-[#eef3ea] px-3 py-2 text-sm">
-                <span className="grid h-7 w-7 place-items-center rounded-md bg-[#dff4e8] font-bold text-[#42c884]">{standing.rank}</span>
+              <div key={standing.participantId} className="grid grid-cols-[2rem_1fr_auto] items-center gap-2 rounded-[24px] border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.92)] px-3 py-2 text-sm">
+                <span className="grid h-7 w-7 place-items-center rounded-xl bg-[rgba(90,93,240,0.1)] font-bold text-[#5a5df0]">{standing.rank}</span>
                 <span className="font-semibold">{standing.name}</span>
-                <span className="text-[#4e5a50]">{standing.wins}勝 / 得失{standing.pointDiff}</span>
+                <span className="text-[#6f7b94]">{standing.wins}勝 / 得失{standing.pointDiff}</span>
               </div>
             ))}
           </div>
@@ -743,19 +823,19 @@ function LeagueMatrix({
       <p className="eyebrow">League matrix</p>
       <h2 className="text-lg font-bold">リーグ表</h2>
       {snapshot.participants.length === 0 ? (
-        <p className="mt-3 text-sm text-[#6f7a70]">参加者を追加するとリーグ表が表示されます。</p>
+        <p className="mt-3 text-sm text-[#6f7b94]">参加者を追加するとリーグ表が表示されます。</p>
       ) : (
         <div className="mt-3 grid gap-5">
           {blocks.map((block) => (
             <div key={block.blockNumber}>
-              {snapshot.tournament.format === "league" ? <h3 className="mb-2 text-sm font-bold text-[#42c884]">ブロック{block.blockNumber}</h3> : null}
-              <div className="overflow-x-auto rounded-lg border border-[#d8dfd2] pb-2">
+              {snapshot.tournament.format === "league" ? <h3 className="mb-2 text-sm font-bold text-[#5a5df0]">ブロック{block.blockNumber}</h3> : null}
+              <div className="overflow-x-auto rounded-[24px] border border-[rgba(114,132,181,0.14)] bg-[rgba(255,255,255,0.7)] pb-2">
                 <table className="min-w-max border-collapse text-sm">
                   <thead>
                     <tr>
-                      <th className="sticky left-0 z-10 min-w-28 border border-[#d8dfd2] bg-[#eef3ea] px-2 py-2 text-left text-[#6f7a70]">名前</th>
+                      <th className="sticky left-0 z-10 min-w-28 border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.96)] px-2 py-2 text-left text-[#6f7b94]">名前</th>
                       {block.participants.map((participant) => (
-                        <th key={participant.id} className="min-w-24 border border-[#d8dfd2] bg-[#eef3ea] px-2 py-2 text-center font-bold text-[#6f7a70]">
+                        <th key={participant.id} className="min-w-24 border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.96)] px-2 py-2 text-center font-bold text-[#6f7b94]">
                           {participant.name}
                         </th>
                       ))}
@@ -764,13 +844,13 @@ function LeagueMatrix({
                   <tbody>
                     {block.participants.map((row) => (
                       <tr key={row.id}>
-                        <th className="sticky left-0 z-10 min-w-28 border border-[#d8dfd2] bg-[#ffffff] px-2 py-2 text-left font-bold">
+                        <th className="sticky left-0 z-10 min-w-28 border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.96)] px-2 py-2 text-left font-bold">
                           {row.name}
                         </th>
                         {block.participants.map((column) => (
-                          <td key={column.id} className="h-14 min-w-24 border border-[#d8dfd2] px-2 py-2 text-center">
+                          <td key={column.id} className="h-14 min-w-24 border border-[rgba(114,132,181,0.14)] px-2 py-2 text-center">
                             {row.id === column.id ? (
-                              <span className="text-[#6f7a70]">-</span>
+                              <span className="text-[#6f7b94]">-</span>
                             ) : (
                               <LeagueCell
                                 rowId={row.id}
@@ -817,12 +897,12 @@ function LeagueCell({
       (item.participant1_id === columnId && item.participant2_id === rowId)
   );
 
-  if (!match) return <span className="text-[#6f7a70]">未</span>;
+  if (!match) return <span className="text-[#6f7b94]">未</span>;
   const canSelect = canSelectMatch(match);
   if (match.participant1_score === null || match.participant2_score === null) {
     return (
       <button
-        className="h-full w-full rounded bg-[#fff3ca] px-2 py-2 font-bold text-[#f5d35f] transition hover:bg-[#ffe7a3] focus:outline-none focus:ring-2 focus:ring-[#f06f45] disabled:cursor-not-allowed disabled:opacity-45"
+        className="h-full w-full rounded-xl bg-[rgba(241,184,75,0.14)] px-2 py-2 font-bold text-[#c58a20] transition hover:bg-[rgba(241,184,75,0.2)] focus:outline-none focus:ring-2 focus:ring-[#5a5df0] disabled:cursor-not-allowed disabled:opacity-45"
         disabled={!canSelect}
         onClick={() => onSelectMatch(match.id)}
         type="button"
@@ -839,12 +919,12 @@ function LeagueCell({
 
   return (
     <button
-      className="h-full w-full rounded px-2 py-2 leading-tight transition hover:bg-[#dff4e8] focus:outline-none focus:ring-2 focus:ring-[#42c884]"
+      className="h-full w-full rounded-xl px-2 py-2 leading-tight transition hover:bg-[rgba(90,93,240,0.08)] focus:outline-none focus:ring-2 focus:ring-[#5a5df0]"
       onClick={() => onSelectMatch(match.id)}
       type="button"
     >
       <p className="font-bold">{result} {rowScore}-{columnScore}</p>
-      <p className="text-xs text-[#6f7a70]">{opponent}</p>
+      <p className="text-xs text-[#6f7b94]">{opponent}</p>
     </button>
   );
 }
@@ -871,7 +951,7 @@ function Bracket({
       <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
         {rounds.map((round) => (
           <div key={round[0]?.round ?? "empty"} className="min-w-56 flex-1">
-            <p className="mb-2 text-sm font-bold text-[#42c884]">Round {(round[0]?.round ?? 0) - roundOffset}</p>
+            <p className="mb-2 text-sm font-bold text-[#5a5df0]">Round {(round[0]?.round ?? 0) - roundOffset}</p>
             <div className="grid gap-2">
               {round.map((match) => (
                 <BracketMatch key={match.id} match={match} participantById={participantById} onSelectMatch={onSelectMatch} canSelectMatch={canSelectMatch} />
@@ -902,15 +982,15 @@ function BracketMatch({
   const canSelect = canSelectMatch(match);
 
   return (
-    <div className="rounded-lg border border-[#d8dfd2] bg-[#eef3ea] p-3 text-sm shadow-lg shadow-black/10">
-      <p className={`rounded px-2 py-1 ${match.winner_id === match.participant1_id ? "bg-[#dff4e8] font-bold text-[#42c884]" : ""}`}>{left}</p>
-      <p className={`mt-1 rounded px-2 py-1 ${match.winner_id === match.participant2_id ? "bg-[#dff4e8] font-bold text-[#42c884]" : ""}`}>{right}</p>
+    <div className="rounded-[24px] border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.92)] p-3 text-sm shadow-lg shadow-[rgba(123,141,191,0.08)]">
+      <p className={`rounded-xl px-2 py-1 ${match.winner_id === match.participant1_id ? "bg-[rgba(90,93,240,0.1)] font-bold text-[#5a5df0]" : ""}`}>{left}</p>
+      <p className={`mt-1 rounded-xl px-2 py-1 ${match.winner_id === match.participant2_id ? "bg-[rgba(90,93,240,0.1)] font-bold text-[#5a5df0]" : ""}`}>{right}</p>
       {isReady ? (
         <button
           className={`mt-2 w-full rounded px-2 py-2 font-bold transition focus:outline-none focus:ring-2 ${
             hasScore
-              ? "bg-[#ffffff] text-[#42c884] hover:bg-[#dff4e8] focus:ring-[#42c884]"
-              : "bg-[#fff3ca] text-[#f5d35f] hover:bg-[#ffe7a3] focus:ring-[#f06f45]"
+              ? "bg-[rgba(90,93,240,0.08)] text-[#5a5df0] hover:bg-[rgba(90,93,240,0.12)] focus:ring-[#5a5df0]"
+              : "bg-[rgba(241,184,75,0.14)] text-[#c58a20] hover:bg-[rgba(241,184,75,0.2)] focus:ring-[#5a5df0]"
           } disabled:cursor-not-allowed disabled:opacity-45`}
           disabled={!canSelect}
           onClick={() => onSelectMatch(match.id)}
@@ -919,7 +999,7 @@ function BracketMatch({
           {hasScore ? `${match.participant1_score}-${match.participant2_score}` : "未入力"}
         </button>
       ) : (
-        <p className="mt-2 rounded bg-[#ffffff] px-2 py-2 text-center font-bold text-[#6f7a70]">未確定</p>
+        <p className="mt-2 rounded-xl bg-[rgba(243,246,255,0.94)] px-2 py-2 text-center font-bold text-[#6f7b94]">未確定</p>
       )}
     </div>
   );

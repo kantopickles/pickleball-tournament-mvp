@@ -1,5 +1,5 @@
 import { getSnapshot, jsonError, verifyAdminPin } from "@/lib/api";
-import { hashPin } from "@/lib/pins";
+import { hashPin, isFourDigitPin } from "@/lib/pins";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export async function PATCH(request: Request, { params }: { params: { slug: string } }) {
@@ -8,7 +8,7 @@ export async function PATCH(request: Request, { params }: { params: { slug: stri
   if (!tournament) return jsonError("管理者PINが違います。", 403);
 
   const participantPin = body.participantPin?.trim();
-  if (!participantPin || participantPin.length < 4) return jsonError("参加者PINは4文字以上にしてください。");
+  if (!participantPin || !isFourDigitPin(participantPin)) return jsonError("参加者PINは4桁の数字にしてください。");
 
   const supabase = getSupabaseAdmin();
   const { error } = await supabase

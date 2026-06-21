@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
 import type { TournamentFormat } from "@/lib/types";
 
 const formatLabels: Record<TournamentFormat, string> = {
@@ -20,8 +21,36 @@ type TournamentListItem = {
   created_at: string;
 };
 
+type InlineMessage = {
+  text: string;
+  tone: "error" | "success";
+  scope: "list" | "create";
+};
+
+const formatSummary = [
+  {
+    key: "ROUND ROBIN",
+    value: "総当たり",
+    detail: "少人数の大会をすばやく回したいときの基本構成。"
+  },
+  {
+    key: "LEAGUE",
+    value: "リーグ戦",
+    detail: "ブロックごとの順位表と、その先の決勝トーナメントまでつなげられます。"
+  },
+  {
+    key: "TOURNAMENT",
+    value: "トーナメント",
+    detail: "勝ち上がり表をそのまま見せながら、現場で結果更新できます。"
+  }
+];
+
 export default function HomePage() {
   const router = useRouter();
+  useRevealOnScroll();
+
+  const normalizePin = (value: string) => value.replace(/\D/g, "").slice(0, 4);
+
   const [name, setName] = useState("");
   const [format, setFormat] = useState<TournamentFormat>("round_robin");
   const [blockCount, setBlockCount] = useState(2);
@@ -31,15 +60,49 @@ export default function HomePage() {
   const [participantPin, setParticipantPin] = useState("");
   const [tournaments, setTournaments] = useState<TournamentListItem[]>([]);
   const [deletePins, setDeletePins] = useState<Record<string, string>>({});
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<InlineMessage | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  const formatFriendlyMessage = (text: string, fallback: string) => {
+    switch (text) {
+      case "大会一覧を読み込めませんでした。":
+        return "大会一覧をうまく読み込めませんでした。少し待ってからもう一度お試しください。";
+      case "大会名を入力してください。":
+        return "大会名を入れてから進めてください。";
+      case "大会形式を選んでください。":
+        return "大会形式を選んでください。";
+      case "管理者PINは4桁の数字にしてください。":
+        return "管理者PINは4桁の数字で入力してください。";
+      case "参加者PINは4桁の数字にしてください。":
+        return "参加者PINは4桁の数字で入力してください。";
+      case "リーグ戦のブロック数は2〜8で選んでください。":
+        return "リーグ戦のブロック数を選び直してください。";
+      case "何本勝負かを選んでください。":
+        return "1試合あたり何本勝負かを選んでください。";
+      case "作成用PINが違います。":
+        return "作成用PINが合っていないようです。もう一度確認してください。";
+      case "大会を作成できませんでした。":
+      case "大会を作成できませんでした。時間をおいて再試行してください。":
+        return "大会を作れませんでした。入力内容を確認して、もう一度お試しください。";
+      case "大会を削除できませんでした。":
+        return "大会を削除できませんでした。作成用PINを確認して、もう一度お試しください。";
+      default:
+        return text || fallback;
+    }
+  };
 
   const leagueCount = useMemo(
     () => tournaments.filter((tournament) => tournament.format === "league").length,
     [tournaments]
   );
-
-  const latestTournament = tournaments[0];
+  const roundRobinCount = useMemo(
+    () => tournaments.filter((tournament) => tournament.format === "round_robin").length,
+    [tournaments]
+  );
+  const tournamentCount = useMemo(
+    () => tournaments.filter((tournament) => tournament.format === "tournament").length,
+    [tournaments]
+  );
 
   useEffect(() => {
     void loadTournaments();
@@ -50,7 +113,11 @@ export default function HomePage() {
     const payload = (await response.json()) as { tournaments?: TournamentListItem[]; error?: string };
 
     if (!response.ok) {
-      setMessage(payload.error ?? "大会一覧を読み込めませんでした。");
+      setMessage({
+        text: formatFriendlyMessage(payload.error ?? "大会一覧を読み込めませんでした。", "大会一覧をうまく読み込めませんでした。"),
+        tone: "error",
+        scope: "list"
+      });
       return;
     }
 
@@ -60,7 +127,7 @@ export default function HomePage() {
   async function createTournament(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSaving(true);
-    setMessage("");
+    setMessage(null);
 
     const response = await fetch("/api/tournaments", {
       method: "POST",
@@ -72,7 +139,11 @@ export default function HomePage() {
     setIsSaving(false);
 
     if (!response.ok || !payload.slug) {
-      setMessage(payload.error ?? "大会を作成できませんでした。");
+      setMessage({
+        text: formatFriendlyMessage(payload.error ?? "大会を作成できませんでした。", "大会を作れませんでした。"),
+        tone: "error",
+        scope: "create"
+      });
       return;
     }
 
@@ -80,7 +151,7 @@ export default function HomePage() {
   }
 
   async function deleteTournament(slug: string) {
-    setMessage("");
+    setMessage(null);
     const response = await fetch(`/api/tournaments/${slug}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -89,7 +160,11 @@ export default function HomePage() {
     const payload = (await response.json()) as { ok?: boolean; error?: string };
 
     if (!response.ok || !payload.ok) {
-      setMessage(payload.error ?? "大会を削除できませんでした。");
+      setMessage({
+        text: formatFriendlyMessage(payload.error ?? "大会を削除できませんでした。", "大会を削除できませんでした。"),
+        tone: "error",
+        scope: "list"
+      });
       return;
     }
 
@@ -98,139 +173,168 @@ export default function HomePage() {
       delete next[slug];
       return next;
     });
-    setMessage("大会を削除しました。");
+    setMessage({
+      text: "大会を削除しました。",
+      tone: "success",
+      scope: "list"
+    });
     await loadTournaments();
   }
 
   return (
     <main className="app-shell">
-      <section className="page-wrap">
-        <header className="hero-panel">
-          <div className="hero-grid">
-            <div className="flex flex-col gap-5">
-              <div className="marketing-chip">Tournament Control Platform</div>
-              <div className="max-w-3xl">
-                <h1 className="display-title text-4xl leading-tight sm:text-5xl lg:text-6xl">
-                  Kanto Pickle&apos;s Drow
-                </h1>
-                <p className="mt-4 max-w-2xl text-base leading-7 text-white/82 sm:text-lg">
-                  大会一覧、参加者管理、リーグ表、順位表、結果入力までをひとつにまとめた、
-                  現場運営向けのピックルボール大会管理ツールです。
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="metric-card">
-                  <p className="text-3xl font-semibold text-white">{tournaments.length}</p>
-                  <p className="mt-2 text-sm text-white/70">保存済み大会</p>
-                </div>
-                <div className="metric-card">
-                  <p className="text-3xl font-semibold text-white">3</p>
-                  <p className="mt-2 text-sm text-white/70">対応形式</p>
-                </div>
-                <div className="metric-card">
-                  <p className="text-3xl font-semibold text-white">{leagueCount}</p>
-                  <p className="mt-2 text-sm text-white/70">リーグ戦大会</p>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <a className="btn-primary min-w-40" href="#create-tournament">
-                  新しい大会を作る
-                </a>
-                <a className="btn-ghost min-w-40 border-white/15 bg-white/10 text-white hover:bg-white/16 hover:text-white" href="#tournament-list">
-                  大会一覧を見る
-                </a>
-              </div>
-            </div>
+      <section className="page-wrap home-page">
+        <header className="topbar" data-reveal>
+          <a className="brand-lockup" href="/">
+            <span className="brand-mark">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path
+                  d="M7.4 18.6a1 1 0 0 1-.7-1.7l4.5-4.5-1.8-1.8a3.5 3.5 0 1 1 4.9-4.9l1.8 1.8 2.2-2.2a1 1 0 1 1 1.4 1.4l-2.2 2.2 1.1 1.1a3.5 3.5 0 0 1-4.9 4.9l-1.1-1.1-4.5 4.5a1 1 0 0 1-.7.3Zm4.8-9 3 3a1.5 1.5 0 0 0 2.1-2.1l-3-3a1.5 1.5 0 1 0-2.1 2.1Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
+            <span>Kanto Pickle&apos;s Draw</span>
+          </a>
 
-            <div className="surface-band overflow-hidden p-3">
-              <img
-                alt="Kanto Pickle's Tournament Drow"
-                className="block aspect-[1672/941] w-full rounded-[22px] object-cover"
-                src="/kanto-pickles-hero.png"
-              />
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <div className="glass-card p-4 text-white">
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/58">Latest tournament</p>
-                  <p className="mt-2 text-lg font-semibold">{latestTournament?.name ?? "まだ大会はありません"}</p>
-                  <p className="mt-1 text-sm text-white/72">
-                    {latestTournament
-                      ? `${formatLabels[latestTournament.format]} / ${latestTournament.match_game_count}本勝負`
-                      : "作成するとここに最新大会が出ます。"}
-                  </p>
-                </div>
-                <div className="glass-card p-4 text-white">
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/58">Operator flow</p>
-                  <p className="mt-2 text-lg font-semibold">作成 → 登録 → ドロー → 入力</p>
-                  <p className="mt-1 text-sm text-white/72">
-                    PIN付きの運営フローで、現場で迷いにくい構成です。
-                  </p>
-                </div>
-              </div>
-            </div>
+          <nav className="topnav-links" aria-label="トップメニュー">
+            <a href="#tournament-list">大会一覧</a>
+            <a href="#create-tournament">大会を作成</a>
+            <a href="#access-guide">使い方</a>
+          </nav>
+
+          <div className="topbar-actions">
+            <a className="topbar-link" href="#tournament-list">
+              既存の大会を見る
+            </a>
+            <a className="btn-primary btn-home-primary" href="#create-tournament">
+              大会を作成
+            </a>
           </div>
         </header>
 
-        {message ? <p className="rounded-md border border-[#d8dfd2] bg-[#ffffff] px-3 py-2 text-sm text-[#4e5a50]">{message}</p> : null}
+        <section className="hero-panel hero-panel-home" data-reveal>
+          <div className="hero-home-grid">
+            <div className="hero-copy">
+              <div className="marketing-chip">Tournament operations for real matchday</div>
+              <h1 className="hero-home-title">Kanto Pickle&apos;s Draw</h1>
+              <p className="hero-home-subtitle">大会運営をもっとシンプルに</p>
+              <p className="hero-home-lead">
+                ピックルボール大会の進行に必要な機能を、見やすく迷いにくい形でまとめています。
+                公開URL、PIN管理、結果入力、順位反映まで、この画面から始められます。
+              </p>
 
-        <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="panel" id="tournament-list">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="eyebrow text-[#ef774f]">Tournaments</p>
-                <h2 className="section-title mt-2">大会一覧</h2>
-                <p className="mt-2 text-sm text-[#6a7588]">
-                  直近の大会をすぐ開けます。削除するときだけ作成用PINを使います。
-                </p>
-              </div>
-              <div className="surface-band px-4 py-3 text-sm text-[#6a7588]">
-                保存数 <span className="ml-2 font-semibold text-[#162033]">{tournaments.length}</span>
+              <div className="hero-cta-row">
+                <a className="btn-primary btn-home-primary" href="#create-tournament">
+                  大会を作成する
+                </a>
+                <a className="btn-ghost btn-home-secondary" href="#tournament-list">
+                  既存の大会を見る
+                </a>
               </div>
             </div>
 
-            <div className="mt-5 grid gap-4">
-              {tournaments.length === 0 ? (
-                <div className="archive-card">
-                  <p className="text-sm text-[#6a7588]">まだ大会はありません。右のフォームから最初の大会を作れます。</p>
-                </div>
-              ) : null}
+            <div className="hero-visual">
+              <div className="hero-visual-card">
+                <img
+                  alt="Pickleball tournament hero"
+                  className="hero-visual-image"
+                  src="/kanto-pickles-hero.png"
+                />
+                <div className="hero-visual-overlay" />
+              </div>
+            </div>
+          </div>
+        </section>
 
+        <section className="stats-grid-light" data-reveal>
+          <article className="stat-card-light">
+            <div className="stat-icon stat-icon-purple">大</div>
+            <div>
+              <p className="stat-number-light">{tournaments.length}</p>
+              <p className="stat-label-light">保存済み大会</p>
+            </div>
+          </article>
+          <article className="stat-card-light">
+            <div className="stat-icon stat-icon-green">参</div>
+            <div>
+              <p className="stat-number-light">{leagueCount + roundRobinCount + tournamentCount}</p>
+              <p className="stat-label-light">対応形式の利用数</p>
+            </div>
+          </article>
+          <article className="stat-card-light">
+            <div className="stat-icon stat-icon-amber">試</div>
+            <div>
+              <p className="stat-number-light">3</p>
+              <p className="stat-label-light">総当たり / リーグ戦 / トーナメント</p>
+            </div>
+          </article>
+        </section>
+
+        <section className="summary-grid-light" data-reveal>
+          {formatSummary.map((item) => (
+            <article key={item.key} className="summary-card-light">
+              <p className="summary-kicker">{item.key}</p>
+              <h2>{item.value}</h2>
+              <p>{item.detail}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="panel panel-home-section" id="tournament-list" data-reveal>
+          <div className="section-head-row">
+            <div>
+              <p className="eyebrow">Tournaments</p>
+              <h2 className="section-title">大会一覧</h2>
+              <p className="section-copy">
+                直近の大会を開いたり、不要になった大会を作成用PINで削除したりできます。
+              </p>
+            </div>
+            <div className="mini-stat-card mini-stat-card-light">
+              <span>保存済み</span>
+              <strong>{tournaments.length}</strong>
+            </div>
+          </div>
+
+          {tournaments.length === 0 ? (
+            <div className="archive-card archive-card-light mt-6">
+              <p className="section-copy">
+                まだ大会はありません。下のフォームから最初の大会を作成できます。
+              </p>
+            </div>
+          ) : (
+            <div className="tournament-card-grid mt-6">
               {tournaments.map((tournament) => (
-                <article key={tournament.id} className="archive-card">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-[#eef4ff] px-3 py-1 text-xs font-semibold text-[#173e70]">
-                          {formatLabels[tournament.format]}
-                        </span>
-                        {tournament.format === "league" ? (
-                          <span className="rounded-full bg-[#dcf7e9] px-3 py-1 text-xs font-semibold text-[#138a57]">
-                            {tournament.block_count}ブロック
-                          </span>
-                        ) : null}
-                        <span className="rounded-full bg-[#fff3cf] px-3 py-1 text-xs font-semibold text-[#9a6a00]">
-                          {tournament.match_game_count ?? 1}本勝負
-                        </span>
-                      </div>
-                      <h3 className="mt-3 text-xl font-semibold tracking-tight text-[#162033]">{tournament.name}</h3>
-                      <p className="mt-2 text-sm text-[#6a7588]">
-                        更新日 {new Date(tournament.created_at).toLocaleDateString("ja-JP")}
-                      </p>
+                <article key={tournament.id} className="tournament-card-light">
+                  <div className="tournament-card-top">
+                    <div className="tournament-badges">
+                      <span className="premium-badge premium-badge-brand">{formatLabels[tournament.format]}</span>
+                      {tournament.format === "league" ? (
+                        <span className="premium-badge premium-badge-soft">{tournament.block_count}ブロック</span>
+                      ) : null}
+                      <span className="premium-badge premium-badge-soft">{tournament.match_game_count}本勝負</span>
                     </div>
-                    <a className="btn-primary min-w-24 px-4 py-3 text-sm" href={`/t/${tournament.slug}`}>
-                      開く
-                    </a>
+                    <h3>{tournament.name}</h3>
                   </div>
 
-                  <div className="mt-4 grid gap-2 md:grid-cols-[1fr_auto]">
+                  <div className="tournament-meta">
+                    <span>作成日 {new Date(tournament.created_at).toLocaleDateString("ja-JP")}</span>
+                  </div>
+
+                  <a className="btn-ghost tournament-open-button" href={`/t/${tournament.slug}`}>
+                    この大会にログイン
+                  </a>
+
+                  <div className="tournament-delete-row">
                     <input
-                      className="input py-3 text-sm"
+                      className="input input-light"
                       onChange={(event) => setDeletePins((current) => ({ ...current, [tournament.slug]: event.target.value }))}
-                      placeholder="削除するときだけ作成用PINを入力"
+                      placeholder="削除時だけ作成用PINを入力"
                       type="password"
                       value={deletePins[tournament.slug] ?? ""}
                     />
                     <button
-                      className="rounded-xl border border-[#ef774f]/30 bg-[#fff7f3] px-4 py-3 text-sm font-semibold text-[#c95533] transition hover:bg-[#fff1ea] disabled:opacity-60"
+                      className="btn-ghost btn-danger-light"
                       disabled={!deletePins[tournament.slug]}
                       onClick={() => void deleteTournament(tournament.slug)}
                       type="button"
@@ -241,35 +345,70 @@ export default function HomePage() {
                 </article>
               ))}
             </div>
+          )}
+          {message?.scope === "list" ? (
+            <p className={`system-message mt-5 ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>
+              {message.text}
+            </p>
+          ) : null}
+        </section>
+
+        <section className="bottom-home-grid" data-reveal>
+          <div className="panel panel-home-section" id="access-guide">
+            <p className="eyebrow">Flow</p>
+            <h2 className="section-title">参加者の方は大会一覧より該当試合を開いて下さい</h2>
+            <div className="flow-list">
+              <div className="flow-item">
+                <span className="flow-step">1</span>
+                <div>
+                  <h3>大会を選ぶ</h3>
+                  <p>大会一覧から自分が参加する大会を開きます。</p>
+                </div>
+              </div>
+              <div className="flow-item">
+                <span className="flow-step">2</span>
+                <div>
+                  <h3>PINと参加者名を確認</h3>
+                  <p>参加者PINと名前選択で、自分の試合だけ入力できる状態にします。</p>
+                </div>
+              </div>
+              <div className="flow-item">
+                <span className="flow-step">3</span>
+                <div>
+                  <h3>未入力の試合を更新</h3>
+                  <p>リーグ表や勝ち上がり表の未入力から、結果をその場で登録できます。</p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="form-shell" id="create-tournament">
+          <div className="form-shell form-shell-home" id="create-tournament">
             <div>
-              <p className="eyebrow text-[#ef774f]">New tournament</p>
-              <h2 className="section-title mt-2">大会を作成</h2>
-              <p className="mt-2 text-sm leading-6 text-[#6a7588]">
-                フォーマットとPINを決めるだけで、すぐ現場運用に入れる大会ページを作成します。
+              <p className="eyebrow">Create</p>
+              <h2 className="section-title">大会を作成</h2>
+              <p className="section-copy">
+                作成後は専用URLへ移動します。参加者登録、ドロー生成、結果入力までそのまま進められます。
               </p>
             </div>
 
-            <form onSubmit={createTournament} className="mt-5 flex flex-col gap-4">
-              <label className="field">
+            <form className="mt-6 flex flex-col gap-4" onSubmit={createTournament}>
+              <label className="field field-light">
                 大会名
                 <input
-                  className="input"
-                  value={name}
+                  className="input input-light"
                   onChange={(event) => setName(event.target.value)}
-                  placeholder="例：春のミックスダブルス"
+                  placeholder="例：第3回 関東ピックルズ杯"
+                  value={name}
                 />
               </label>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="field">
+                <label className="field field-light">
                   大会形式
                   <select
-                    className="input"
-                    value={format}
+                    className="input input-light"
                     onChange={(event) => setFormat(event.target.value as TournamentFormat)}
+                    value={format}
                   >
                     {Object.entries(formatLabels).map(([value, label]) => (
                       <option key={value} value={value}>
@@ -279,12 +418,12 @@ export default function HomePage() {
                   </select>
                 </label>
 
-                <label className="field">
+                <label className="field field-light">
                   1試合あたり
                   <select
-                    className="input"
-                    value={matchGameCount}
+                    className="input input-light"
                     onChange={(event) => setMatchGameCount(Number(event.target.value))}
+                    value={matchGameCount}
                   >
                     <option value={1}>1本勝負</option>
                     <option value={3}>3本勝負</option>
@@ -294,12 +433,12 @@ export default function HomePage() {
               </div>
 
               {format === "league" ? (
-                <label className="field">
+                <label className="field field-light">
                   ブロック数
                   <select
-                    className="input"
-                    value={blockCount}
+                    className="input input-light"
                     onChange={(event) => setBlockCount(Number(event.target.value))}
+                    value={blockCount}
                   >
                     {[2, 3, 4, 5, 6, 7, 8].map((count) => (
                       <option key={count} value={count}>
@@ -310,51 +449,53 @@ export default function HomePage() {
                 </label>
               ) : null}
 
-              <div className="grid gap-4">
-                <label className="field">
-                  作成用PIN
-                  <input
-                    className="input"
-                    value={creatorPin}
-                    onChange={(event) => setCreatorPin(event.target.value)}
-                    placeholder="大会作成できる人だけが知るPIN"
-                    type="password"
-                  />
-                </label>
+              <label className="field field-light">
+                作成用PIN
+                <input
+                  className="input input-light"
+                  onChange={(event) => setCreatorPin(event.target.value)}
+                  placeholder="大会作成できる人だけが知るPIN"
+                  type="password"
+                  value={creatorPin}
+                />
+              </label>
 
-                <label className="field">
-                  管理者PIN
-                  <input
-                    className="input"
-                    value={adminPin}
-                    onChange={(event) => setAdminPin(event.target.value)}
-                    placeholder="4文字以上"
-                    type="password"
-                  />
-                </label>
+              <label className="field field-light">
+                管理者PIN
+                <input
+                  className="input input-light"
+                  inputMode="numeric"
+                  maxLength={4}
+                  onChange={(event) => setAdminPin(normalizePin(event.target.value))}
+                  pattern="[0-9]{4}"
+                  placeholder="4桁の数字"
+                  type="password"
+                  value={adminPin}
+                />
+              </label>
 
-                <label className="field">
-                  参加者PIN
-                  <input
-                    className="input"
-                    value={participantPin}
-                    onChange={(event) => setParticipantPin(event.target.value)}
-                    placeholder="参加者全員で使うPIN"
-                    type="password"
-                  />
-                </label>
-              </div>
+              <label className="field field-light">
+                参加者PIN
+                <input
+                  className="input input-light"
+                  inputMode="numeric"
+                  maxLength={4}
+                  onChange={(event) => setParticipantPin(normalizePin(event.target.value))}
+                  pattern="[0-9]{4}"
+                  placeholder="4桁の数字"
+                  type="password"
+                  value={participantPin}
+                />
+              </label>
 
-              <div className="sub-panel">
-                <p className="text-sm font-semibold text-[#162033]">作成後の流れ</p>
-                <p className="mt-2 text-sm leading-6 text-[#6a7588]">
-                  大会を作成すると専用URLに移動します。そこから参加者登録、ドロー生成、結果入力、順位確定まで進められます。
-                </p>
-              </div>
-
-              <button className="btn-danger mt-1 py-4 text-base" disabled={isSaving} type="submit">
-                {isSaving ? "作成中..." : "大会を作成"}
+              <button className="btn-primary btn-home-primary mt-2" disabled={isSaving} type="submit">
+                {isSaving ? "作成中..." : "大会を作成する"}
               </button>
+              {message?.scope === "create" ? (
+                <p className={`system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>
+                  {message.text}
+                </p>
+              ) : null}
             </form>
           </div>
         </section>
