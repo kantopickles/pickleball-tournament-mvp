@@ -252,22 +252,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              <div className="sub-panel">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6a7588]">Flow</p>
-                <p className="mt-2 text-sm font-semibold text-[#162033]">作成</p>
-              </div>
-              <div className="sub-panel">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6a7588]">Inputs</p>
-                <p className="mt-2 text-sm font-semibold text-[#162033]">PIN管理</p>
-              </div>
-              <div className="sub-panel">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6a7588]">Ready</p>
-                <p className="mt-2 text-sm font-semibold text-[#162033]">即運用</p>
-              </div>
-            </div>
-
-            <form onSubmit={createTournament} className="mt-6 flex flex-col gap-4">
+            <form onSubmit={createTournament} className="mt-5 flex flex-col gap-4">
               <label className="field">
                 大会名
                 <input
