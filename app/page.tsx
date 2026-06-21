@@ -52,12 +52,17 @@ export default function HomePage() {
 
   const normalizePin = (value: string) => value.replace(/\D/g, "").slice(0, 4);
   const defaultTournamentImage = "/tournament-default.png";
+  const coverAspect = 16 / 9;
 
   const [name, setName] = useState("");
   const [format, setFormat] = useState<TournamentFormat>("round_robin");
   const [blockCount, setBlockCount] = useState(2);
   const [matchGameCount, setMatchGameCount] = useState(1);
+  const [originalCoverImageUrl, setOriginalCoverImageUrl] = useState<string | null>(null);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [coverZoom, setCoverZoom] = useState(1);
+  const [coverOffsetX, setCoverOffsetX] = useState(50);
+  const [coverOffsetY, setCoverOffsetY] = useState(50);
   const [creatorPin, setCreatorPin] = useState("");
   const [adminPin, setAdminPin] = useState("");
   const [participantPin, setParticipantPin] = useState("");
@@ -98,6 +103,7 @@ export default function HomePage() {
 
   async function handleCoverImageChange(file: File | null) {
     if (!file) {
+      setOriginalCoverImageUrl(null);
       setCoverImageUrl(null);
       return;
     }
@@ -136,9 +142,51 @@ export default function HomePage() {
       return;
     }
 
-    setCoverImageUrl(dataUrl);
+    setOriginalCoverImageUrl(dataUrl);
+    setCoverZoom(1);
+    setCoverOffsetX(50);
+    setCoverOffsetY(50);
     setMessage(null);
   }
+
+  useEffect(() => {
+    if (!originalCoverImageUrl) {
+      setCoverImageUrl(null);
+      return;
+    }
+
+    let cancelled = false;
+    const image = new Image();
+
+    image.onload = () => {
+      if (cancelled) return;
+
+      const baseWidth = image.width / image.height > coverAspect ? image.height * coverAspect : image.width;
+      const baseHeight = image.width / image.height > coverAspect ? image.height : image.width / coverAspect;
+      const cropWidth = baseWidth / coverZoom;
+      const cropHeight = baseHeight / coverZoom;
+      const maxX = Math.max(image.width - cropWidth, 0);
+      const maxY = Math.max(image.height - cropHeight, 0);
+      const sourceX = maxX * (coverOffsetX / 100);
+      const sourceY = maxY * (coverOffsetY / 100);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 1600;
+      canvas.height = 900;
+
+      const context = canvas.getContext("2d");
+      if (!context) return;
+
+      context.drawImage(image, sourceX, sourceY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
+      setCoverImageUrl(canvas.toDataURL("image/jpeg", 0.92));
+    };
+
+    image.src = originalCoverImageUrl;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [coverAspect, coverOffsetX, coverOffsetY, coverZoom, originalCoverImageUrl]);
 
   const leagueCount = useMemo(
     () => tournaments.filter((tournament) => tournament.format === "league").length,
@@ -570,6 +618,75 @@ export default function HomePage() {
                     src={coverImageUrl || defaultTournamentImage}
                   />
                 </div>
+                {originalCoverImageUrl ? (
+                  <div className="mt-4 grid gap-4">
+                    <div className="crop-control-grid">
+                      <label className="crop-control">
+                        <span>横位置</span>
+                        <input
+                          className="crop-range"
+                          max={100}
+                          min={0}
+                          onChange={(event) => setCoverOffsetX(Number(event.target.value))}
+                          type="range"
+                          value={coverOffsetX}
+                        />
+                      </label>
+                      <label className="crop-control">
+                        <span>縦位置</span>
+                        <input
+                          className="crop-range"
+                          max={100}
+                          min={0}
+                          onChange={(event) => setCoverOffsetY(Number(event.target.value))}
+                          type="range"
+                          value={coverOffsetY}
+                        />
+                      </label>
+                      <label className="crop-control">
+                        <span>拡大</span>
+                        <input
+                          className="crop-range"
+                          max={2.5}
+                          min={1}
+                          onChange={(event) => setCoverZoom(Number(event.target.value))}
+                          step={0.05}
+                          type="range"
+                          value={coverZoom}
+                        />
+                      </label>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="btn-ghost"
+                        onClick={() => {
+                          setCoverZoom(1);
+                          setCoverOffsetX(50);
+                          setCoverOffsetY(50);
+                        }}
+                        type="button"
+                      >
+                        位置をリセット
+                      </button>
+                      <button
+                        className="btn-ghost btn-danger-light"
+                        onClick={() => {
+                          setOriginalCoverImageUrl(null);
+                          setCoverImageUrl(null);
+                          setCoverZoom(1);
+                          setCoverOffsetX(50);
+                          setCoverOffsetY(50);
+                        }}
+                        type="button"
+                      >
+                        画像を外す
+                      </button>
+                    </div>
+                    <p className="text-sm text-[#6f7b94]">
+                      LINEのアイコン設定みたいに、使いたい範囲を動かして調整できます。
+                    </p>
+                  </div>
+                ) : null}
               </div>
 
               <button className="btn-primary btn-home-primary mt-2" disabled={isSaving} type="submit">

@@ -742,6 +742,20 @@ select option {
     color: #237851;
   }
 
+  .crop-control-grid {
+    @apply grid gap-3;
+  }
+
+  .crop-control {
+    @apply flex flex-col gap-2 text-sm font-semibold;
+    color: var(--muted-strong);
+  }
+
+  .crop-range {
+    width: 100%;
+    accent-color: var(--brand);
+  }
+
   .section-head-row {
     @apply flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between;
   }
