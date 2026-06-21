@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pickle Draw Font Samples</title>
+    <style>
+      :root {
+        color: #f4f6ef;
+        background: #111312;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at top left, rgba(66, 200, 132, 0.2), transparent 28rem),
+          radial-gradient(circle at 90% 10%, rgba(240, 111, 69, 0.12), transparent 22rem),
+          radial-gradient(circle at bottom right, rgba(245, 211, 95, 0.12), transparent 26rem),
+          #111312;
+      }
+
+      main {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0 56px;
+      }
+
+      header {
+        margin-bottom: 24px;
+        border: 1px solid #30362f;
+        border-radius: 14px;
+        padding: 24px;
+        background: linear-gradient(135deg, rgba(66, 200, 132, 0.24), rgba(245, 211, 95, 0.09) 48%, rgba(240, 111, 69, 0.12)), #191c1a;
+      }
+
+      .eyebrow {
+        margin: 0;
+        color: #f5d35f;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      h1 {
+        margin: 10px 0 0;
+        font-size: clamp(30px, 4vw, 48px);
+        line-height: 1.12;
+      }
+
+      .lead {
+        max-width: 720px;
+        margin: 14px 0 0;
+        color: #d5dbd0;
+        font-size: 15px;
+        line-height: 1.8;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 16px;
+      }
+
+      article {
+        border: 1px solid #30362f;
+        border-radius: 14px;
+        padding: 18px;
+        background: rgba(25, 28, 26, 0.96);
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.14);
+      }
+
+      .sample-name {
+        margin: 0;
+        color: #42c884;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      h2 {
+        margin: 8px 0 0;
+        font-size: 24px;
+        line-height: 1.25;
+      }
+
+      .body {
+        margin: 12px 0 0;
+        color: #d5dbd0;
+        font-size: 14px;
+        line-height: 1.8;
+      }
+
+      .mini {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .stat {
+        min-height: 72px;
+        border: 1px solid #30362f;
+        border-radius: 10px;
+        padding: 10px;
+        background: rgba(17, 19, 18, 0.8);
+      }
+
+      .stat strong {
+        display: block;
+        color: #f5d35f;
+        font-size: 22px;
+      }
+
+      .stat span {
+        display: block;
+        margin-top: 3px;
+        color: #a6ada4;
+        font-size: 12px;
+      }
+
+      button {
+        width: 100%;
+        margin-top: 16px;
+        border: 0;
+        border-radius: 8px;
+        padding: 13px 14px;
+        background: #f06f45;
+        color: white;
+        font: inherit;
+        font-weight: 800;
+      }
+
+      .f1 { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", "Yu Gothic", sans-serif; }
+      .f2 { font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif; }
+      .f3 { font-family: "Arial", "Yu Gothic", "Hiragino Sans", sans-serif; }
+      .f4 { font-family: "Trebuchet MS", "Hiragino Sans", "Yu Gothic", sans-serif; }
+      .f5 { font-family: "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif; }
+      .f6 { font-family: "Verdana", "Hiragino Sans", "Yu Gothic", sans-serif; }
+      .f7 { font-family: "Gill Sans", "Hiragino Sans", "Yu Gothic", sans-serif; }
+      .f8 { font-family: "Georgia", "Hiragino Mincho ProN", "Yu Mincho", serif; }
+      .f9 { font-family: "Times New Roman", "Hiragino Mincho ProN", "Yu Mincho", serif; }
+      .f10 { font-family: "Courier New", "Osaka-Mono", monospace; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="f1">
+        <p class="eyebrow">Font samples</p>
+        <h1>Pickle Draw のフォント候補</h1>
+        <p class="lead">
+          それぞれ同じ文言・同じUIで並べています。実際の大会管理画面で、読みやすさ・かっこよさ・スポーツ感のバランスを見比べてください。
+        </p>
+      </header>
+
+      <section class="grid">
+        <article class="f1">
+          <p class="sample-name">01 / Apple System</p>
+          <h2>ピックルボール大会を、すぐ回せる形に。</h2>
+          <p class="body">読みやすさ優先。MacやiPhoneで自然に見える、いちばん無難でアプリらしい雰囲気です。</p>
+          <div class="mini"><div class="stat"><strong>12</strong><span>参加者</span></div><div class="stat"><strong>4</strong><span>未入力</span></div><div class="stat"><strong>18</strong><span>入力済み</span></div></div>
+          <button>大会を作成</button>
+        </article>
+
+        <article class="f2">
+          <p class="sample-name">02 / Hiragino Clean</p>
+          <h2>ピックルボール大会を、すぐ回せる形に。</h2>
+          <p class="body">日本語がきれい。落ち着いていて、参加者にも管理者にも読みやすい王道タイプです。</p>
+          <div class="mini"><div class="stat"><strong>12</strong><span>参加者</span></div><div class="stat"><strong>4</strong><span>未入力</span></div><div class="stat"><strong>18</strong><span>入力済み</span></div></div>
+          <button>大会を作成</button>
+        </article>
+
+        <article class="f3">
+          <p class="sample-name">03 / Arial Sport</p>
+          <h2>ピックルボール大会を、すぐ回せる形に。</h2>
+          <p class="body">数字や英字がはっきり。スコア、順位、対戦表などの管理画面と相性がいいです。</p>
+          <div class="mini"><div class="stat"><strong>12</strong><span>参加者</span></div><div class="stat"><strong>4</strong><span>未入力</span></div><div class="stat"><strong>18</strong><span>入力済み</span></div></div>
+          <button>大会を作成</button>
+        </article>
+
+        <article class="f4">
+          <p class="sample-name">04 / Friendly</p>
+          <h2>ピックルボール大会を、すぐ回せる形に。</h2>
+          <p class="body">少し丸くて親しみやすい印象。大会アプリに硬さを出しすぎたくない場合に合います。</p>
+          <div class="mini"><div class="stat"><strong>12</strong><span>参加者</span></div><div class="stat"><strong>4</strong><span>未入力</span></div><div class="stat"><strong>18</strong><span>入力済み</span></div></div>
+          <button>大会を作成</button>
+        </article>
+
+        <article class="f5">
+          <p class="sample-name">05 / Avenir Premium</p>
+          <h2>ピックルボール大会を、すぐ回せる形に。</h2>
+          <p class="body">少し高級感。スポーツクラブや大会運営のブランド感を出したいなら候補です。</p>
+          <div class="mini"><div class="stat"><strong>12</strong><span>参加者</span></div><div class="stat"><strong>4</strong><span>未入力</span></div><div class="stat"><strong>18</strong><span>入力済み</span></div></div>
+          <button>大会を作成</button>
+        </article>
+
+        <article class="f6">
+          <p class="sample-name">06 / Verdana Clear</p>
+          <h2>ピックルボール大会を、すぐ回せる形に。</h2>
+          <p class="body">小さい文字に強い。スマホで試合結果や一覧を読む場面を重視するなら見やすいです。</p>
+          <div class="mini"><div class="stat"><strong>12</strong><span>参加者</span></div><div class="stat"><strong>4</strong><span>未入力</span></div><div class="stat"><strong>18</strong><span>入力済み</span></div></div>
+          <button>大会を作成</button>
+        </article>
+
+        <article class="f7">
+          <p class="sample-name">07 / Gill Sans Club</p>
+          <h2>ピックルボール大会を、すぐ回せる形に。</h2>
+          <p class="body">クラブ感、チーム感が少し出ます。英字ロゴや見出しとの相性がよさそうです。</p>
+          <div class="mini"><div class="stat"><strong>12</strong><span>参加者</span></div><div class="stat"><strong>4</strong><span>未入力</span></div><div class="stat"><strong>18</strong><span>入力済み</span></div></div>
+          <button>大会を作成</button>
+        </article>
+
+        <article class="f8">
+          <p class="sample-name">08 / Serif Elegant</p>
+          <h2>ピックルボール大会を、すぐ回せる形に。</h2>
+          <p class="body">上品で大会パンフレットっぽい印象。アプリ感よりイベント感を出したい場合の候補です。</p>
+          <div class="mini"><div class="stat"><strong>12</strong><span>参加者</span></div><div class="stat"><strong>4</strong><span>未入力</span></div><div class="stat"><strong>18</strong><span>入力済み</span></div></div>
+          <button>大会を作成</button>
+        </article>
+
+        <article class="f9">
+          <p class="sample-name">09 / Classic Serif</p>
+          <h2>ピックルボール大会を、すぐ回せる形に。</h2>
+          <p class="body">かなりクラシック。大会名や表彰ページなら面白いですが、入力画面には少し硬めです。</p>
+          <div class="mini"><div class="stat"><strong>12</strong><span>参加者</span></div><div class="stat"><strong>4</strong><span>未入力</span></div><div class="stat"><strong>18</strong><span>入力済み</span></div></div>
+          <button>大会を作成</button>
+        </article>
+
+        <article class="f10">
+          <p class="sample-name">10 / Scoreboard Mono</p>
+          <h2>ピックルボール大会を、すぐ回せる形に。</h2>
+          <p class="body">スコアボード感。全体に使うより、点数や順位など数字部分に使うと効きそうです。</p>
+          <div class="mini"><div class="stat"><strong>12</strong><span>参加者</span></div><div class="stat"><strong>4</strong><span>未入力</span></div><div class="stat"><strong>18</strong><span>入力済み</span></div></div>
+          <button>大会を作成</button>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

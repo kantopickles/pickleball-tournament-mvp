@@ -3,18 +3,21 @@
 @tailwind utilities;
 
 :root {
-  color: #1f261f;
-  background: #f7f8f3;
-  --bg: #f7f8f3;
+  color: #162033;
+  background: #f3f6fb;
+  --bg: #f3f6fb;
   --surface: #ffffff;
-  --surface-strong: #eef3ea;
-  --line: #d8dfd2;
-  --muted: #6f7a70;
-  --text: #1f261f;
-  --green: #42c884;
-  --green-soft: #dff4e8;
-  --yellow: #f5d35f;
-  --orange: #f06f45;
+  --surface-strong: #eef3f9;
+  --line: #d7e1ec;
+  --muted: #6a7588;
+  --text: #162033;
+  --navy: #173e70;
+  --navy-deep: #0f2747;
+  --green: #39c980;
+  --green-soft: #dcf7e9;
+  --yellow: #f2ca57;
+  --orange: #ef774f;
+  --blue-soft: #dcecff;
 }
 
 * {
@@ -23,12 +26,11 @@
 
 body {
   margin: 0;
-  font-family: "Trebuchet MS", "Hiragino Sans", "Yu Gothic", sans-serif;
+  font-family: "Avenir Next", "Avenir", "Hiragino Sans", "Yu Gothic", sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(66, 200, 132, 0.2), transparent 28rem),
-    radial-gradient(circle at 90% 10%, rgba(240, 111, 69, 0.12), transparent 22rem),
-    radial-gradient(circle at bottom right, rgba(245, 211, 95, 0.12), transparent 26rem),
-    #f7f8f3;
+    radial-gradient(circle at top left, rgba(57, 201, 128, 0.14), transparent 30rem),
+    radial-gradient(circle at 92% 8%, rgba(239, 119, 79, 0.1), transparent 22rem),
+    linear-gradient(180deg, #f9fbff 0%, #f3f6fb 48%, #eef3f9 100%);
   color: var(--text);
 }
 
@@ -55,51 +57,51 @@ select option {
 
 @layer components {
   .app-shell {
-    @apply min-h-screen px-4 py-5 text-[#1f261f] sm:px-6 lg:px-8;
+    @apply min-h-screen px-4 py-5 text-[#162033] sm:px-6 lg:px-8;
   }
 
   .page-wrap {
-    @apply mx-auto flex w-full max-w-6xl flex-col gap-5;
+    @apply mx-auto flex w-full max-w-7xl flex-col gap-6;
   }
 
   .hero-panel {
-    @apply overflow-hidden rounded-xl border border-[#d8dfd2] bg-[linear-gradient(135deg,rgba(66,200,132,0.24),rgba(245,211,95,0.09)_48%,rgba(240,111,69,0.12)),#ffffff] p-5 shadow-2xl shadow-black/20;
+    @apply overflow-hidden rounded-2xl border border-[#d7e1ec] bg-[linear-gradient(135deg,#173e70_0%,#0f2747_64%,#17365d_100%)] p-6 text-white shadow-[0_30px_80px_rgba(15,39,71,0.24)];
   }
 
   .panel {
-    @apply rounded-xl border border-[#d8dfd2] bg-[#ffffff]/95 p-4 shadow-xl shadow-black/10;
+    @apply rounded-2xl border border-[#d7e1ec] bg-white p-5 shadow-[0_20px_50px_rgba(15,39,71,0.08)];
   }
 
   .sub-panel {
-    @apply rounded-lg border border-[#d8dfd2] bg-[#f7f8f3]/80 p-3;
+    @apply rounded-xl border border-[#d7e1ec] bg-[#f5f8fc] p-3;
   }
 
   .field {
-    @apply flex flex-col gap-2 text-sm font-semibold text-[#1f261f];
+    @apply flex flex-col gap-2 text-sm font-semibold text-[#162033];
   }
 
   .input {
-    @apply rounded-md border border-[#d8dfd2] bg-[#f7f8f3] px-3 py-3 font-normal text-[#1f261f] outline-none transition focus:border-[#42c884] focus:ring-2 focus:ring-[#42c884]/20;
+    @apply rounded-xl border border-[#d7e1ec] bg-[#f8fbff] px-4 py-3 font-normal text-[#162033] outline-none transition focus:border-green-400 focus:ring-2 focus:ring-green-100;
   }
 
   .btn-primary {
-    @apply rounded-md bg-[#42c884] px-4 py-3 text-center font-bold text-[#062114] transition hover:bg-[#65d99e] disabled:opacity-60;
+    @apply rounded-xl bg-[#39c980] px-4 py-3 text-center font-bold text-[#082314] transition hover:bg-[#5fdaa0] disabled:opacity-60;
   }
 
   .btn-danger {
-    @apply rounded-md bg-[#f06f45] px-4 py-3 text-center font-bold text-white transition hover:bg-[#ff835d] disabled:opacity-60;
+    @apply rounded-xl bg-[#ef774f] px-4 py-3 text-center font-bold text-white transition hover:bg-[#ff8c66] disabled:opacity-60;
   }
 
   .btn-ghost {
-    @apply rounded-md border border-[#d8dfd2] bg-[#eef3ea] px-3 py-2 text-center text-sm font-bold text-[#1f261f] transition hover:border-[#42c884]/60 hover:bg-[#e5f1e8] disabled:opacity-60;
+    @apply rounded-xl border border-[#d7e1ec] bg-[#f5f8fc] px-3 py-2 text-center text-sm font-bold text-[#162033] transition hover:border-green-300 hover:bg-[#edf7f2] disabled:opacity-60;
   }
 
   .btn-warning {
-    @apply rounded-md bg-[#f5d35f] px-3 py-2 text-center font-bold text-[#1f261f] transition hover:bg-[#ffe17b] disabled:opacity-60;
+    @apply rounded-xl bg-[#f2ca57] px-3 py-2 text-center font-bold text-[#162033] transition hover:bg-[#ffd86f] disabled:opacity-60;
   }
 
   .eyebrow {
-    @apply text-sm font-semibold text-[#d96a22];
+    @apply text-sm font-semibold uppercase tracking-[0.2em] text-[#f2ca57];
   }
 
   .muted {
@@ -110,18 +112,41 @@ select option {
     @apply rounded-full border px-2.5 py-1 text-xs font-bold;
   }
 
-  .title-slice {
-    color: #1f261f;
-    position: relative;
+  .surface-band {
+    @apply rounded-[28px] border border-[#d7e1ec] bg-white backdrop-blur;
   }
 
-  .title-slice::after {
-    content: attr(data-text);
-    color: #f06f45;
-    left: 0;
-    position: absolute;
-    top: 0;
-    clip-path: polygon(0 42%, 100% 29%, 100% 52%, 0 64%);
-    transform: translateX(8px);
+  .section-title {
+    @apply text-2xl font-semibold tracking-tight text-[#162033];
+    font-family: "Avenir Next", "Trebuchet MS", "Hiragino Sans", sans-serif;
+  }
+
+  .display-title {
+    @apply font-semibold tracking-tight;
+    font-family: "Avenir Next", "Trebuchet MS", "Hiragino Sans", sans-serif;
+  }
+
+  .hero-grid {
+    @apply grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch;
+  }
+
+  .glass-card {
+    @apply rounded-2xl border border-white/15 bg-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)];
+  }
+
+  .marketing-chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-white/80;
+  }
+
+  .form-shell {
+    @apply rounded-[28px] border border-[#d7e1ec] bg-[#ffffff] p-5 shadow-[0_24px_60px_rgba(15,39,71,0.12)];
+  }
+
+  .archive-card {
+    @apply rounded-2xl border border-[#d7e1ec] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-4 shadow-[0_14px_36px_rgba(15,39,71,0.06)];
+  }
+
+  .metric-card {
+    @apply rounded-2xl border border-[#d7e1ec] bg-white/10 px-4 py-4 backdrop-blur;
   }
 }

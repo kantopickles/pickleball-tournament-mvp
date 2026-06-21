@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Background Logo 30 Preview</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1265px;
+        min-height: 1274px;
+        overflow: hidden;
+        background: #111312;
+      }
+
+      .preview {
+        position: relative;
+        width: 1265px;
+        height: 1274px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at top left, rgba(66, 200, 132, 0.2), transparent 28rem),
+          radial-gradient(circle at 90% 10%, rgba(240, 111, 69, 0.12), transparent 22rem),
+          radial-gradient(circle at bottom right, rgba(245, 211, 95, 0.12), transparent 26rem),
+          #111312;
+      }
+
+      .logo {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 1120px;
+        height: 1120px;
+        transform: translate(-50%, -48%);
+        opacity: 0.3;
+        object-fit: contain;
+      }
+
+      .site {
+        position: absolute;
+        inset: 0;
+        width: 1265px;
+        height: 1274px;
+        object-fit: cover;
+        opacity: 0.76;
+      }
+
+      .note {
+        position: absolute;
+        right: 24px;
+        bottom: 24px;
+        border: 1px solid rgba(245, 211, 95, 0.34);
+        border-radius: 999px;
+        padding: 9px 13px;
+        background: rgba(17, 19, 18, 0.82);
+        color: #f5d35f;
+        font: 700 13px "Trebuchet MS", sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="preview">
+      <img class="logo" src="./background-logo-source.png" alt="" />
+      <img class="site" src="./current-public-site.png" alt="" />
+      <div class="note">background logo opacity 30%</div>
+    </div>
+  </body>
+</html>

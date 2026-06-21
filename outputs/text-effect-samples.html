@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pickle Draw Text Effect Samples</title>
+    <style>
+      :root {
+        color: #f4f6ef;
+        background: #111312;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Trebuchet MS", "Hiragino Sans", "Yu Gothic", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(66, 200, 132, 0.2), transparent 28rem),
+          radial-gradient(circle at 90% 10%, rgba(240, 111, 69, 0.12), transparent 22rem),
+          radial-gradient(circle at bottom right, rgba(245, 211, 95, 0.12), transparent 26rem),
+          #111312;
+      }
+
+      main {
+        width: min(1160px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0 56px;
+      }
+
+      header,
+      article {
+        border: 1px solid #30362f;
+        border-radius: 14px;
+        background: rgba(25, 28, 26, 0.96);
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.14);
+      }
+
+      header {
+        margin-bottom: 20px;
+        padding: 24px;
+        background: linear-gradient(135deg, rgba(66, 200, 132, 0.24), rgba(245, 211, 95, 0.09) 48%, rgba(240, 111, 69, 0.12)), #191c1a;
+      }
+
+      .eyebrow {
+        margin: 0;
+        color: #f5d35f;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      h1 {
+        margin: 10px 0 0;
+        font-size: clamp(30px, 4vw, 48px);
+        line-height: 1.12;
+      }
+
+      .lead {
+        max-width: 760px;
+        margin: 14px 0 0;
+        color: #d5dbd0;
+        font-size: 15px;
+        line-height: 1.8;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 16px;
+      }
+
+      article {
+        min-height: 250px;
+        overflow: hidden;
+        padding: 18px;
+        position: relative;
+      }
+
+      .sample-name {
+        margin: 0;
+        color: #42c884;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .title {
+        margin: 18px 0 0;
+        font-size: clamp(32px, 6vw, 56px);
+        font-weight: 900;
+        line-height: 1.05;
+        letter-spacing: 0;
+      }
+
+      .body {
+        margin: 18px 0 0;
+        color: #d5dbd0;
+        font-size: 14px;
+        line-height: 1.8;
+      }
+
+      .plain {
+        color: #f4f6ef;
+      }
+
+      .outline {
+        color: transparent;
+        -webkit-text-stroke: 2px #f5d35f;
+        text-shadow: 0 0 22px rgba(245, 211, 95, 0.18);
+      }
+
+      .bag {
+        color: #111312;
+        text-shadow:
+          2px 0 #f5d35f,
+          -2px 0 #f5d35f,
+          0 2px #f5d35f,
+          0 -2px #f5d35f,
+          3px 3px 0 #f06f45;
+      }
+
+      .court-shadow {
+        color: #f4f6ef;
+        text-shadow:
+          4px 4px 0 #183327,
+          8px 8px 0 rgba(66, 200, 132, 0.34);
+      }
+
+      .orange-pop {
+        color: #f5d35f;
+        text-shadow:
+          2px 2px 0 #f06f45,
+          5px 5px 0 #183327,
+          0 0 18px rgba(245, 211, 95, 0.28);
+      }
+
+      .glitch {
+        color: #f4f6ef;
+        position: relative;
+        text-shadow:
+          2px 0 #42c884,
+          -2px 0 #f06f45;
+      }
+
+      .glitch::before,
+      .glitch::after {
+        content: attr(data-text);
+        left: 0;
+        position: absolute;
+        top: 0;
+        width: 100%;
+        overflow: hidden;
+      }
+
+      .glitch::before {
+        color: #42c884;
+        clip-path: inset(0 0 48% 0);
+        transform: translate(4px, -2px);
+      }
+
+      .glitch::after {
+        color: #f06f45;
+        clip-path: inset(52% 0 0 0);
+        transform: translate(-4px, 2px);
+      }
+
+      .slice {
+        color: #f4f6ef;
+        position: relative;
+      }
+
+      .slice::after {
+        content: attr(data-text);
+        color: #f5d35f;
+        left: 0;
+        position: absolute;
+        top: 0;
+        clip-path: polygon(0 42%, 100% 29%, 100% 52%, 0 64%);
+        transform: translateX(8px);
+      }
+
+      .stripe {
+        color: transparent;
+        background:
+          repeating-linear-gradient(
+            -12deg,
+            #f5d35f 0 7px,
+            #f06f45 7px 14px,
+            #42c884 14px 21px
+          );
+        -webkit-background-clip: text;
+        background-clip: text;
+        filter: drop-shadow(5px 5px 0 rgba(0, 0, 0, 0.28));
+      }
+
+      .neon {
+        color: #f4f6ef;
+        text-shadow:
+          0 0 4px #42c884,
+          0 0 14px rgba(66, 200, 132, 0.85),
+          0 0 30px rgba(66, 200, 132, 0.45);
+      }
+
+      .label {
+        display: inline-block;
+        color: #111312;
+        background: #f5d35f;
+        padding: 0.04em 0.16em 0.1em;
+        box-decoration-break: clone;
+        -webkit-box-decoration-break: clone;
+        transform: rotate(-1.5deg);
+        box-shadow: 6px 6px 0 #f06f45;
+      }
+
+      .deep-outline {
+        color: #f06f45;
+        -webkit-text-stroke: 1.5px #f4f6ef;
+        text-shadow:
+          3px 3px 0 #183327,
+          6px 6px 0 #42c884,
+          9px 9px 0 rgba(0, 0, 0, 0.28);
+      }
+
+      .cutout {
+        color: #191c1a;
+        -webkit-text-stroke: 1px rgba(244, 246, 239, 0.72);
+        text-shadow:
+          0 1px 0 #f5d35f,
+          0 2px 0 #f5d35f,
+          0 10px 24px rgba(0, 0, 0, 0.3);
+      }
+
+      .recommend {
+        border-color: rgba(66, 200, 132, 0.72);
+      }
+
+      .recommend::before {
+        content: "使いやすい候補";
+        position: absolute;
+        right: 14px;
+        top: 14px;
+        border-radius: 999px;
+        background: #183327;
+        color: #42c884;
+        padding: 5px 9px;
+        font-size: 11px;
+        font-weight: 900;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">Text effect samples</p>
+        <h1>4番フォントベースの文字エフェクト候補</h1>
+        <p class="lead">
+          本体アプリにはまだ反映していません。見出しに使う想定で、派手めから実用寄りまで並べています。
+        </p>
+      </header>
+
+      <section class="grid">
+        <article class="recommend">
+          <p class="sample-name">01 / そのまま強め</p>
+          <h2 class="title plain">Pickle Draw</h2>
+          <p class="body">読みやすさ重視。エフェクトは控えめで、実用アプリとして一番事故が少ないです。</p>
+        </article>
+
+        <article>
+          <p class="sample-name">02 / 中抜き</p>
+          <h2 class="title outline">Pickle Draw</h2>
+          <p class="body">ロゴ感が出ます。見出しやトップだけならアリ。小さい文字には向きません。</p>
+        </article>
+
+        <article class="recommend">
+          <p class="sample-name">03 / 袋文字</p>
+          <h2 class="title bag">Pickle Draw</h2>
+          <p class="body">スポーツイベントっぽさが出ます。明るくて、ピックルボールの雰囲気にも合います。</p>
+        </article>
+
+        <article class="recommend">
+          <p class="sample-name">04 / コート影</p>
+          <h2 class="title court-shadow">Pickle Draw</h2>
+          <p class="body">今の緑系デザインに自然に合うタイプ。派手すぎず、でも印象は強くなります。</p>
+        </article>
+
+        <article>
+          <p class="sample-name">05 / オレンジポップ</p>
+          <h2 class="title orange-pop">Pickle Draw</h2>
+          <p class="body">大会感、元気さが出ます。ボタン色と近いので全体に統一感が出ます。</p>
+        </article>
+
+        <article>
+          <p class="sample-name">06 / グリッチ</p>
+          <h2 class="title glitch" data-text="Pickle Draw">Pickle Draw</h2>
+          <p class="body">かっこいいですが、スポーツ大会アプリとしては少し尖った印象になります。</p>
+        </article>
+
+        <article>
+          <p class="sample-name">07 / スライス</p>
+          <h2 class="title slice" data-text="Pickle Draw">Pickle Draw</h2>
+          <p class="body">動きのある印象。ボールのスピード感や大会感を少し出せます。</p>
+        </article>
+
+        <article>
+          <p class="sample-name">08 / カラーストライプ</p>
+          <h2 class="title stripe">Pickle Draw</h2>
+          <p class="body">派手で楽しい雰囲気。トップ見出しだけならインパクトがあります。</p>
+        </article>
+
+        <article>
+          <p class="sample-name">09 / ネオン</p>
+          <h2 class="title neon">Pickle Draw</h2>
+          <p class="body">夜のイベントやゲームっぽさがあります。今のダーク背景とは相性が良いです。</p>
+        </article>
+
+        <article>
+          <p class="sample-name">10 / ラベル風</p>
+          <h2 class="title"><span class="label">Pickle Draw</span></h2>
+          <p class="body">ステッカーっぽい見た目。親しみやすく、SNS画像っぽい雰囲気になります。</p>
+        </article>
+
+        <article>
+          <p class="sample-name">11 / 深い縁取り</p>
+          <h2 class="title deep-outline">Pickle Draw</h2>
+          <p class="body">一番スポーツロゴ寄り。強いですが、使いすぎると少し重くなります。</p>
+        </article>
+
+        <article>
+          <p class="sample-name">12 / くり抜き影</p>
+          <h2 class="title cutout">Pickle Draw</h2>
+          <p class="body">落ち着いた中抜き。大人っぽく、今の画面にも比較的なじみます。</p>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

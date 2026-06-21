@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="960" viewBox="0 0 1440 960">
+  <defs>
+    <radialGradient id="bgA" cx="10%" cy="8%" r="60%">
+      <stop offset="0" stop-color="#42c884" stop-opacity="0.22"/>
+      <stop offset="0.58" stop-color="#42c884" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bgB" cx="92%" cy="12%" r="44%">
+      <stop offset="0" stop-color="#f06f45" stop-opacity="0.16"/>
+      <stop offset="0.62" stop-color="#f06f45" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bgC" cx="88%" cy="90%" r="56%">
+      <stop offset="0" stop-color="#f5d35f" stop-opacity="0.14"/>
+      <stop offset="0.7" stop-color="#f5d35f" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="hero" x1="130" y1="96" x2="1290" y2="340">
+      <stop offset="0" stop-color="#224733"/>
+      <stop offset="0.48" stop-color="#1a211c"/>
+      <stop offset="1" stop-color="#2a2018"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#000000" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <rect width="1440" height="960" fill="#111312"/>
+  <rect width="1440" height="960" fill="url(#bgA)"/>
+  <rect width="1440" height="960" fill="url(#bgB)"/>
+  <rect width="1440" height="960" fill="url(#bgC)"/>
+
+  <g font-family="Trebuchet MS, Hiragino Sans, Yu Gothic, sans-serif">
+    <rect x="96" y="70" width="1248" height="238" rx="18" fill="url(#hero)" stroke="#30362f" filter="url(#softShadow)"/>
+    <text x="136" y="125" fill="#f5d35f" font-size="18" font-weight="800">Pickle Draw MVP</text>
+
+    <text x="145" y="209" fill="#183327" font-size="62" font-weight="900">Kanto Pickle&apos;s Drow</text>
+    <text x="141" y="205" fill="#f06f45" font-size="62" font-weight="900">Kanto Pickle&apos;s Drow</text>
+    <text x="136" y="200" fill="#f5d35f" font-size="62" font-weight="900">Kanto Pickle&apos;s Drow</text>
+
+    <text x="136" y="256" fill="#d5dbd0" font-size="20">参加者の方は大会一覧より該当試合を開いて下さい</text>
+
+    <rect x="96" y="344" width="1248" height="300" rx="18" fill="#191c1a" stroke="#30362f" filter="url(#softShadow)" opacity="0.96"/>
+    <text x="136" y="398" fill="#42c884" font-size="18" font-weight="800">Tournaments</text>
+    <text x="136" y="442" fill="#f4f6ef" font-size="32" font-weight="800">大会一覧</text>
+    <text x="1068" y="442" fill="#a6ada4" font-size="18">開く、または作成用PINで削除できます。</text>
+
+    <rect x="136" y="480" width="560" height="116" rx="14" fill="#111312" stroke="#30362f"/>
+    <text x="164" y="526" fill="#f4f6ef" font-size="26" font-weight="800">リーグテスト1</text>
+    <text x="164" y="566" fill="#a6ada4" font-size="18">リーグ戦 / 3ブロック / 1本勝負 / 2026/6/15</text>
+    <rect x="572" y="512" width="88" height="46" rx="8" fill="#42c884"/>
+    <text x="599" y="542" fill="#062114" font-size="18" font-weight="900">開く</text>
+
+    <rect x="744" y="480" width="560" height="116" rx="14" fill="#111312" stroke="#30362f"/>
+    <text x="772" y="526" fill="#f4f6ef" font-size="26" font-weight="800">春のミックスダブルス</text>
+    <text x="772" y="566" fill="#a6ada4" font-size="18">総当たり / 3本勝負 / 2026/6/16</text>
+    <rect x="1180" y="512" width="88" height="46" rx="8" fill="#42c884"/>
+    <text x="1207" y="542" fill="#062114" font-size="18" font-weight="900">開く</text>
+
+    <rect x="96" y="680" width="1248" height="196" rx="18" fill="#191c1a" stroke="#30362f" filter="url(#softShadow)" opacity="0.96"/>
+    <text x="136" y="733" fill="#f5d35f" font-size="18" font-weight="800">New tournament</text>
+    <text x="136" y="777" fill="#f4f6ef" font-size="32" font-weight="800">大会を作成</text>
+    <rect x="136" y="816" width="340" height="44" rx="8" fill="#111312" stroke="#30362f"/>
+    <text x="156" y="844" fill="#7f887e" font-size="17">例：春のミックスダブルス</text>
+    <rect x="496" y="816" width="220" height="44" rx="8" fill="#111312" stroke="#30362f"/>
+    <text x="516" y="844" fill="#f4f6ef" font-size="17">総当たり</text>
+    <rect x="736" y="816" width="220" height="44" rx="8" fill="#111312" stroke="#30362f"/>
+    <text x="756" y="844" fill="#7f887e" font-size="17">作成用PIN</text>
+    <rect x="1084" y="812" width="220" height="52" rx="8" fill="#f06f45"/>
+    <text x="1147" y="845" fill="#ffffff" font-size="18" font-weight="900">大会を作成</text>
+  </g>
+</svg>

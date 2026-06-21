@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Pickle Draw",
-  description: "Pickleball tournament management MVP"
+  title: "Kanto Pickle's Drow",
+  description: "ピックルボール大会を、運営しやすく、参加者にもやさしく回せる大会管理アプリ"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
