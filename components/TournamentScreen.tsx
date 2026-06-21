@@ -300,6 +300,19 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   }
 
   async function generateDraw() {
+    const hasRecordedMatchResult = snapshot?.matches.some(
+      (match) =>
+        match.locked ||
+        match.participant1_score !== null ||
+        match.participant2_score !== null ||
+        Boolean(match.game_scores?.length)
+    );
+
+    if (hasRecordedMatchResult) {
+      const confirmed = window.confirm("今入力されている試合結果は全て削除されます。よろしいですか？");
+      if (!confirmed) return;
+    }
+
     const ok = await requestSnapshot(`/api/tournaments/${slug}/generate`, {
       method: "POST",
       body: JSON.stringify({ adminPin })
