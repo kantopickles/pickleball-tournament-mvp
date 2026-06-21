@@ -42,6 +42,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const [playoffRankStart, setPlayoffRankStart] = useState(1);
   const [playoffRankEnd, setPlayoffRankEnd] = useState(1);
   const [isAdminMode, setIsAdminMode] = useState(false);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [isRestoringAccess, setIsRestoringAccess] = useState(true);
 
@@ -113,7 +114,12 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     window.localStorage.removeItem(storageKey);
   }
 
-  async function requestAccess(pin: string, mode: "participant" | "admin", silent = false) {
+  async function requestAccess(
+    pin: string,
+    mode: "participant" | "admin",
+    silent = false,
+    scope: InlineMessage["scope"] = "access"
+  ) {
     setIsBusy(true);
     if (!silent) setMessage(null);
 
@@ -129,7 +135,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
 
     if (!response.ok || !("snapshot" in payload)) {
       if (!silent) {
-        showMessage("access", "error", "error" in payload ? payload.error : "大会を開けませんでした。", "大会を開けませんでした。");
+        showMessage(scope, "error", "error" in payload ? payload.error : "大会を開けませんでした。", "大会を開けませんでした。");
       }
       return null;
     }
@@ -139,11 +145,13 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     if (payload.role === "admin") {
       setAdminPin(pin);
       setIsAdminMode(true);
+      setIsAdminAuthenticated(true);
       saveStoredAccess({ mode: "admin", pin });
     } else {
       setParticipantPin(pin);
       setLoginParticipantPin(pin);
       setIsAdminMode(false);
+      setIsAdminAuthenticated(false);
       saveStoredAccess({ mode: "participant", pin });
     }
 
@@ -257,6 +265,18 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     }
 
     await requestAccess(accessPin, accessMode);
+  }
+
+  async function loginAdminFromMenu() {
+    if (!adminPin) {
+      showMessage("admin", "error", "管理者PINを入力してください。", "管理者PINを入れてください。");
+      return;
+    }
+
+    const restored = await requestAccess(adminPin, "admin", false, "admin");
+    if (restored) {
+      showMessage("admin", "success", "管理者としてログインしました。編集できます。", "");
+    }
   }
 
   async function addParticipant(event: FormEvent<HTMLFormElement>) {
@@ -495,6 +515,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const openCount = Math.max(snapshot.matches.length - lockedCount, 0);
   const activeParticipant = activeParticipantId ? participantById.get(activeParticipantId) : null;
   const isParticipantLoggedIn = Boolean(activeParticipantId && participantPin);
+  const canUseAdminTools = isAdminMode && isAdminAuthenticated;
 
   return (
     <main className="app-shell">
@@ -616,17 +637,32 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               <div className="mt-3 grid gap-3">
                 <label className="field">
                   管理者PIN
-                  <input
-                    className="input"
-                    inputMode="numeric"
-                    maxLength={4}
-                    onChange={(event) => setAdminPin(normalizePin(event.target.value))}
-                    pattern="[0-9]{4}"
-                    placeholder="4桁の数字"
-                    type="password"
-                    value={adminPin}
-                  />
+                  <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                    <input
+                      className="input"
+                      inputMode="numeric"
+                      maxLength={4}
+                      onChange={(event) => setAdminPin(normalizePin(event.target.value))}
+                      pattern="[0-9]{4}"
+                      placeholder="4桁の数字"
+                      type="password"
+                      value={adminPin}
+                    />
+                    <button
+                      className={isAdminAuthenticated ? "btn-ghost" : "btn-primary"}
+                      disabled={isBusy}
+                      onClick={() => void loginAdminFromMenu()}
+                      type="button"
+                    >
+                      {isBusy ? "確認中..." : isAdminAuthenticated ? "ログイン中" : "ログイン"}
+                    </button>
+                  </div>
                 </label>
+                <p className="text-sm text-[#6f7b94]">
+                  {isAdminAuthenticated
+                    ? "管理者としてログイン中です。このまま各種編集ができます。"
+                    : "先に管理者PINでログインすると、下の編集機能が使えます。"}
+                </p>
                 <div className="sub-panel grid gap-2">
                   <label className="field">
                     参加者共通PINを変更
@@ -643,7 +679,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                   </label>
                   <button
                     className="btn-ghost py-3 text-base"
-                    disabled={isBusy || !adminPin}
+                    disabled={isBusy || !canUseAdminTools}
                     onClick={() => void updateParticipantPin()}
                     type="button"
                   >
@@ -651,7 +687,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                   </button>
                 </div>
                 <input className="input" value={participantName} onChange={(event) => setParticipantName(event.target.value)} placeholder="参加者名" />
-                <button className="btn-primary" disabled={isBusy} type="submit">
+                <button className="btn-primary" disabled={isBusy || !canUseAdminTools} type="submit">
                   参加者を追加
                 </button>
                 {snapshot.tournament.format === "league" ? (
@@ -686,7 +722,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                         </select>
                       </label>
                     </div>
-                    <button className="btn-danger" disabled={isBusy || !adminPin} onClick={() => void generatePlayoff()} type="button">
+                    <button className="btn-danger" disabled={isBusy || !canUseAdminTools} onClick={() => void generatePlayoff()} type="button">
                       {playoffTitle(playoffRankStart, playoffRankEnd)}作成
                     </button>
                   </div>
@@ -706,7 +742,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               <h2 className="text-lg font-bold">参加者</h2>
             </div>
             {isAdminMode ? (
-              <button className="btn-danger px-3 py-2 text-sm" disabled={isBusy} onClick={generateDraw} type="button">
+              <button className="btn-danger px-3 py-2 text-sm" disabled={isBusy || !canUseAdminTools} onClick={generateDraw} type="button">
                 ドロー生成
               </button>
             ) : null}
@@ -722,7 +758,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                   {isAdminMode ? (
                     <button
                       className="rounded btn-danger-ghost px-2 py-1"
-                      disabled={isBusy || !adminPin}
+                      disabled={isBusy || !canUseAdminTools}
                       onClick={() => void deleteParticipant(participant)}
                       type="button"
                     >
@@ -736,7 +772,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
         </section>
 
         {snapshot.tournament.format === "tournament" ? (
-          <Bracket rounds={rounds} participantById={participantById} onSelectMatch={focusMatch} canSelectMatch={(match) => isAdminMode || isMatchForParticipant(match, activeParticipantId)} />
+          <Bracket rounds={rounds} participantById={participantById} onSelectMatch={focusMatch} canSelectMatch={(match) => canUseAdminTools || isMatchForParticipant(match, activeParticipantId)} />
         ) : (
           <>
             <LeagueMatrix
@@ -744,7 +780,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               matches={leagueMatches}
               participantById={participantById}
               onSelectMatch={focusMatch}
-              canSelectMatch={(match) => isAdminMode || isMatchForParticipant(match, activeParticipantId)}
+              canSelectMatch={(match) => canUseAdminTools || isMatchForParticipant(match, activeParticipantId)}
             />
             <Standings snapshot={snapshot} />
             {playoffGroups.map((group) => (
@@ -752,7 +788,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 {isAdminMode ? (
                   <button
                     className="btn-danger-ghost justify-self-end px-3 py-2 text-sm"
-                    disabled={isBusy || !adminPin}
+                    disabled={isBusy || !canUseAdminTools}
                     onClick={() => void deletePlayoff(group.offset, group.title)}
                     type="button"
                   >
@@ -763,7 +799,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                   rounds={group.rounds}
                   participantById={participantById}
                   onSelectMatch={focusMatch}
-                  canSelectMatch={(match) => isAdminMode || isMatchForParticipant(match, activeParticipantId)}
+                  canSelectMatch={(match) => canUseAdminTools || isMatchForParticipant(match, activeParticipantId)}
                   title={group.title}
                   roundOffset={group.offset}
                 />
@@ -786,7 +822,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
             const right = match.participant2_id ? participantById.get(match.participant2_id)?.name : "未定";
             const draft = getScoreDraft(match);
             const swap = swapDraft[match.id];
-            const canSaveMatch = isAdminMode || (isParticipantLoggedIn && isMatchForParticipant(match, activeParticipantId));
+            const canSaveMatch = canUseAdminTools || (isParticipantLoggedIn && isMatchForParticipant(match, activeParticipantId));
             return (
               <article id={`match-${match.id}`} key={match.id} className="panel scroll-mt-4">
                 <div className="flex items-start justify-between gap-3">
@@ -810,7 +846,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                       <input
                         id={gameIndex === 0 ? `score-${match.id}-1` : undefined}
                         className="input min-w-0 text-center"
-                        disabled={!canSaveMatch || (match.locked && !isAdminMode)}
+                        disabled={!canSaveMatch || (match.locked && !canUseAdminTools)}
                         inputMode="numeric"
                         onChange={(event) => setScore(match, gameIndex, "participant1Score", event.target.value)}
                         placeholder="0"
@@ -820,7 +856,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                       <input
                         id={gameIndex === 0 ? `score-${match.id}-2` : undefined}
                         className="input min-w-0 text-center"
-                        disabled={!canSaveMatch || (match.locked && !isAdminMode)}
+                        disabled={!canSaveMatch || (match.locked && !canUseAdminTools)}
                         inputMode="numeric"
                         onChange={(event) => setScore(match, gameIndex, "participant2Score", event.target.value)}
                         placeholder="0"
@@ -835,18 +871,18 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                   ) : null}
                 </div>
 
-                {!isAdminMode && !canSaveMatch ? (
+                {!canUseAdminTools && !canSaveMatch ? (
                   <p className="mt-4 rounded-2xl border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.92)] px-3 py-2 text-sm text-[#6f7b94]">
                     {isParticipantLoggedIn ? "選択した参加者が含まれる試合だけ入力できます。" : "結果入力するには、上の参加者ログインをしてください。"}
                   </p>
                 ) : null}
 
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <button className="btn-primary" disabled={isBusy || !canSaveMatch || (!isAdminMode && match.locked)} onClick={() => void saveResult(match)} type="button">
+                  <button className="btn-primary" disabled={isBusy || !canSaveMatch || (!canUseAdminTools && match.locked)} onClick={() => void saveResult(match)} type="button">
                     結果を保存
                   </button>
                   {isAdminMode ? (
-                    <button className="btn-ghost py-3 text-base" disabled={isBusy || !adminPin} onClick={() => void unlockMatch(match)} type="button">
+                    <button className="btn-ghost py-3 text-base" disabled={isBusy || !canUseAdminTools} onClick={() => void unlockMatch(match)} type="button">
                       ロック解除
                     </button>
                   ) : null}
@@ -868,7 +904,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                           <option key={participant.id} value={participant.id}>{participant.name}</option>
                         ))}
                       </select>
-                      <button className="btn-ghost py-3 text-base" disabled={isBusy || !adminPin} onClick={() => void swapMatch(match)} type="button">
+                      <button className="btn-ghost py-3 text-base" disabled={isBusy || !canUseAdminTools} onClick={() => void swapMatch(match)} type="button">
                         組み替えを保存
                       </button>
                     </div>
