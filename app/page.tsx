@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
 import type { TournamentFormat } from "@/lib/types";
@@ -188,19 +188,6 @@ export default function HomePage() {
     };
   }, [coverAspect, coverOffsetX, coverOffsetY, coverZoom, originalCoverImageUrl]);
 
-  const leagueCount = useMemo(
-    () => tournaments.filter((tournament) => tournament.format === "league").length,
-    [tournaments]
-  );
-  const roundRobinCount = useMemo(
-    () => tournaments.filter((tournament) => tournament.format === "round_robin").length,
-    [tournaments]
-  );
-  const tournamentCount = useMemo(
-    () => tournaments.filter((tournament) => tournament.format === "tournament").length,
-    [tournaments]
-  );
-
   useEffect(() => {
     void loadTournaments();
   }, []);
@@ -342,30 +329,6 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-        </section>
-
-        <section className="stats-grid-light" data-reveal>
-          <article className="stat-card-light">
-            <div className="stat-icon stat-icon-purple">大</div>
-            <div>
-              <p className="stat-number-light">{tournaments.length}</p>
-              <p className="stat-label-light">保存済み大会</p>
-            </div>
-          </article>
-          <article className="stat-card-light">
-            <div className="stat-icon stat-icon-green">参</div>
-            <div>
-              <p className="stat-number-light">{leagueCount + roundRobinCount + tournamentCount}</p>
-              <p className="stat-label-light">対応形式の利用数</p>
-            </div>
-          </article>
-          <article className="stat-card-light">
-            <div className="stat-icon stat-icon-amber">試</div>
-            <div>
-              <p className="stat-number-light">3</p>
-              <p className="stat-label-light">総当たり / リーグ戦 / トーナメント</p>
-            </div>
-          </article>
         </section>
 
         <section className="summary-grid-light" data-reveal>
