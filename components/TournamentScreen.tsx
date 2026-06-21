@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
 import type { Match, PublicParticipant, TournamentFormat, TournamentSnapshot } from "@/lib/types";
 
@@ -16,6 +16,11 @@ type InlineMessage = {
   text: string;
   tone: "error" | "success";
   scope: "access" | "participant" | "admin" | "matches";
+};
+type SavedAccess = {
+  mode: "participant" | "admin";
+  pin: string;
+  participantId?: string;
 };
 
 export default function TournamentScreen({ slug }: { slug: string }) {
@@ -38,6 +43,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const [playoffRankEnd, setPlayoffRankEnd] = useState(1);
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
+  const [isRestoringAccess, setIsRestoringAccess] = useState(true);
 
   const participantById = useMemo(() => {
     const map = new Map<string, PublicParticipant>();
@@ -46,6 +52,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   }, [snapshot]);
 
   const shareUrl = typeof window === "undefined" ? "" : `${window.location.origin}/t/${slug}`;
+  const storageKey = `pickle-draw-access:${slug}`;
 
   const friendlyMessage = (text: string, fallback: string) => {
     switch (text) {
@@ -84,6 +91,140 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     });
   }
 
+  function saveStoredAccess(next: SavedAccess) {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(storageKey, JSON.stringify(next));
+  }
+
+  function readStoredAccess() {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return null;
+
+    try {
+      return JSON.parse(raw) as SavedAccess;
+    } catch {
+      return null;
+    }
+  }
+
+  function clearStoredAccess() {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(storageKey);
+  }
+
+  async function requestAccess(pin: string, mode: "participant" | "admin", silent = false) {
+    setIsBusy(true);
+    if (!silent) setMessage(null);
+
+    const response = await fetch(`/api/tournaments/${slug}/access`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin, mode })
+    });
+    const payload = (await response.json()) as
+      | { role: "participant" | "admin"; snapshot: TournamentSnapshot }
+      | { error: string };
+    setIsBusy(false);
+
+    if (!response.ok || !("snapshot" in payload)) {
+      if (!silent) {
+        showMessage("access", "error", "error" in payload ? payload.error : "大会を開けませんでした。", "大会を開けませんでした。");
+      }
+      return null;
+    }
+
+    setSnapshot(payload.snapshot);
+
+    if (payload.role === "admin") {
+      setAdminPin(pin);
+      setIsAdminMode(true);
+      saveStoredAccess({ mode: "admin", pin });
+    } else {
+      setParticipantPin(pin);
+      setLoginParticipantPin(pin);
+      setIsAdminMode(false);
+      saveStoredAccess({ mode: "participant", pin });
+    }
+
+    setAccessPin("");
+    if (!silent) setMessage(null);
+    return payload;
+  }
+
+  async function requestParticipantLogin(pin: string, participantId: string, silent = false) {
+    setIsBusy(true);
+    if (!silent) setMessage(null);
+
+    const response = await fetch(`/api/tournaments/${slug}/participant-login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin, participantId })
+    });
+    const payload = (await response.json()) as { ok?: boolean; error?: string };
+    setIsBusy(false);
+
+    if (!response.ok || !payload.ok) {
+      if (!silent) {
+        showMessage("participant", "error", payload.error ?? "ログインできませんでした。", "ログインできませんでした。");
+      }
+      return false;
+    }
+
+    setParticipantPin(pin);
+    setLoginParticipantPin(pin);
+    setSelectedParticipantId(participantId);
+    setActiveParticipantId(participantId);
+    saveStoredAccess({ mode: "participant", pin, participantId });
+
+    if (!silent) {
+      showMessage("participant", "success", "ログインできました。自分の試合だけ入力できます。", "");
+    }
+
+    return true;
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function restoreAccess() {
+      const saved = readStoredAccess();
+      if (!saved?.pin) {
+        if (!cancelled) setIsRestoringAccess(false);
+        return;
+      }
+
+      const restored = await requestAccess(saved.pin, saved.mode, true);
+
+      if (!restored) {
+        clearStoredAccess();
+        if (!cancelled) setIsRestoringAccess(false);
+        return;
+      }
+
+      if (saved.mode === "participant") {
+        if (saved.participantId) {
+          const ok = await requestParticipantLogin(saved.pin, saved.participantId, true);
+          if (!ok) {
+            saveStoredAccess({ mode: "participant", pin: saved.pin });
+            setSelectedParticipantId("");
+            setActiveParticipantId("");
+          }
+        } else {
+          setLoginParticipantPin(saved.pin);
+        }
+      }
+
+      if (!cancelled) setIsRestoringAccess(false);
+    }
+
+    void restoreAccess();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
   async function requestSnapshot(path: string, init: RequestInit, scope: InlineMessage["scope"]) {
     setIsBusy(true);
     setMessage(null);
@@ -115,36 +256,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
       return;
     }
 
-    setIsBusy(true);
-    setMessage(null);
-    const response = await fetch(`/api/tournaments/${slug}/access`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pin: accessPin, mode: accessMode })
-    });
-    const payload = (await response.json()) as
-      | { role: "participant" | "admin"; snapshot: TournamentSnapshot }
-      | { error: string };
-    setIsBusy(false);
-
-    if (!response.ok || !("snapshot" in payload)) {
-      showMessage("access", "error", "error" in payload ? payload.error : "大会を開けませんでした。", "大会を開けませんでした。");
-      return;
-    }
-
-    setSnapshot(payload.snapshot);
-
-    if (payload.role === "admin") {
-      setAdminPin(accessPin);
-      setIsAdminMode(true);
-    } else {
-      setParticipantPin(accessPin);
-      setLoginParticipantPin(accessPin);
-      setIsAdminMode(false);
-    }
-
-    setAccessPin("");
-    setMessage(null);
+    await requestAccess(accessPin, accessMode);
   }
 
   async function addParticipant(event: FormEvent<HTMLFormElement>) {
@@ -228,29 +340,17 @@ export default function TournamentScreen({ slug }: { slug: string }) {
       return;
     }
 
-    setIsBusy(true);
-    setMessage(null);
-    const response = await fetch(`/api/tournaments/${slug}/participant-login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pin: loginParticipantPin, participantId: selectedParticipantId })
-    });
-    const payload = (await response.json()) as { ok?: boolean; error?: string };
-    setIsBusy(false);
-
-    if (!response.ok || !payload.ok) {
-      showMessage("participant", "error", payload.error ?? "ログインできませんでした。", "ログインできませんでした。");
-      return;
-    }
-
-    setParticipantPin(loginParticipantPin);
-    setActiveParticipantId(selectedParticipantId);
-    showMessage("participant", "success", "ログインできました。自分の試合だけ入力できます。", "");
+    await requestParticipantLogin(loginParticipantPin, selectedParticipantId);
   }
 
   function logoutParticipant() {
     setActiveParticipantId("");
     setSelectedParticipantId("");
+    if (participantPin) {
+      saveStoredAccess({ mode: "participant", pin: participantPin });
+    } else {
+      clearStoredAccess();
+    }
   }
 
   async function unlockMatch(match: Match) {
@@ -334,6 +434,11 @@ export default function TournamentScreen({ slug }: { slug: string }) {
             <p className="mt-3 text-sm leading-6 text-[#6f7b94]">
               参加者名や試合情報を表示する前に、PINで確認します。参加者は参加者PIN、主催者は管理者PINを入力してください。
             </p>
+            {isRestoringAccess ? (
+              <p className="mt-4 rounded-2xl border border-[rgba(90,93,240,0.14)] bg-[rgba(90,93,240,0.06)] px-4 py-3 text-sm text-[#4a56b2]">
+                前回のログイン状態を確認しています...
+              </p>
+            ) : null}
             <form className="mt-6 grid gap-4" onSubmit={unlockTournamentAccess}>
               <div className="grid gap-2 sm:grid-cols-2">
                 <button
@@ -478,6 +583,9 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 {isBusy ? "確認中..." : "入る"}
               </button>
             </form>
+            {!message?.scope && loginParticipantPin ? (
+              <p className="mt-3 text-sm text-[#6f7b94]">前回使ったPINを入れた状態にしています。</p>
+            ) : null}
             {message?.scope === "participant" ? (
               <p className={`mt-3 system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>{message.text}</p>
             ) : null}
