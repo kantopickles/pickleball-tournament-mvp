@@ -10,15 +10,23 @@ export async function GET() {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("tournaments")
-    .select("id,slug,name,format,block_count,match_game_count,created_at")
+    .select("id,slug,name,format,block_count,match_game_count,cover_image_url,created_at")
     .order("created_at", { ascending: false });
 
   if (error) {
-    const fallback = await supabase.from("tournaments").select("id,slug,name,format,created_at").order("created_at", { ascending: false });
+    const fallback = await supabase
+      .from("tournaments")
+      .select("id,slug,name,format,created_at")
+      .order("created_at", { ascending: false });
     if (fallback.error) return jsonError("大会一覧を読み込めませんでした。", 500);
 
     return NextResponse.json({
-      tournaments: (fallback.data ?? []).map((tournament) => ({ ...tournament, block_count: 1, match_game_count: 1 }))
+      tournaments: (fallback.data ?? []).map((tournament) => ({
+        ...tournament,
+        block_count: 1,
+        match_game_count: 1,
+        cover_image_url: null
+      }))
     });
   }
 
@@ -34,6 +42,7 @@ export async function POST(request: Request) {
     creatorPin?: string;
     blockCount?: number;
     matchGameCount?: number;
+    coverImageUrl?: string | null;
   };
   const name = body.name?.trim();
   const adminPin = body.adminPin?.trim();
@@ -41,6 +50,7 @@ export async function POST(request: Request) {
   const creatorPin = body.creatorPin?.trim();
   const blockCount = body.format === "league" ? Number(body.blockCount) : 1;
   const matchGameCount = Number(body.matchGameCount ?? 1);
+  const coverImageUrl = body.coverImageUrl?.trim() || null;
   const requiredCreatorPin = process.env.CREATOR_PIN?.trim();
 
   if (requiredCreatorPin && creatorPin !== requiredCreatorPin) return jsonError("作成用PINが違います。", 403);
@@ -52,6 +62,9 @@ export async function POST(request: Request) {
     return jsonError("リーグ戦のブロック数は2〜8で選んでください。");
   }
   if (![1, 3, 5].includes(matchGameCount)) return jsonError("何本勝負かを選んでください。");
+  if (coverImageUrl && !coverImageUrl.startsWith("data:image/")) {
+    return jsonError("大会画像の読み込みに失敗しました。画像を選び直してください。");
+  }
 
   const supabase = getSupabaseAdmin();
 
@@ -63,6 +76,7 @@ export async function POST(request: Request) {
       format: body.format,
       block_count: blockCount,
       match_game_count: matchGameCount,
+      cover_image_url: coverImageUrl,
       admin_pin_hash: hashPin(adminPin),
       participant_pin_hash: hashPin(participantPin)
     };
@@ -71,6 +85,30 @@ export async function POST(request: Request) {
 
     if (!error && data) {
       return NextResponse.json({ slug: data.slug });
+    }
+
+    if (error?.message?.includes("cover_image_url")) {
+      if (coverImageUrl) {
+        return jsonError("大会画像を使うには、Supabase に画像用の列を追加してください。");
+      }
+
+      const legacyInsert = await supabase
+        .from("tournaments")
+        .insert({
+          slug,
+          name,
+          format: body.format,
+          block_count: blockCount,
+          match_game_count: matchGameCount,
+          admin_pin_hash: hashPin(adminPin),
+          participant_pin_hash: hashPin(participantPin)
+        })
+        .select("slug")
+        .single();
+
+      if (!legacyInsert.error && legacyInsert.data) {
+        return NextResponse.json({ slug: legacyInsert.data.slug });
+      }
     }
 
     if (body.format !== "league") {

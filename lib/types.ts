@@ -7,6 +7,7 @@ export type Tournament = {
   format: TournamentFormat;
   block_count: number;
   match_game_count: number;
+  cover_image_url: string | null;
   admin_pin_hash: string;
   participant_pin_hash: string | null;
   created_at: string;

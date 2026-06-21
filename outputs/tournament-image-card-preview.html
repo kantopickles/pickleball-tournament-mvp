@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tournament Image Card Preview</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #eef3fb;
+        --panel: rgba(255, 255, 255, 0.92);
+        --line: rgba(114, 132, 181, 0.14);
+        --text: #16213d;
+        --muted: #6f7b94;
+        --brand: #5a5df0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "SF Pro Display", "Hiragino Sans", "Yu Gothic", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(112, 130, 255, 0.11), transparent 26rem),
+          linear-gradient(180deg, #f8faff 0%, #f3f6ff 52%, #eef3fb 100%);
+        color: var(--text);
+      }
+
+      .wrap {
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 32px 20px 56px;
+      }
+
+      .hero {
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: var(--panel);
+        box-shadow: 0 18px 40px rgba(123, 141, 191, 0.12);
+      }
+
+      .eyebrow {
+        margin: 0;
+        font-size: 12px;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: var(--brand);
+        font-weight: 700;
+      }
+
+      h1 {
+        margin: 14px 0 0;
+        font-size: clamp(2rem, 4vw, 3.5rem);
+        line-height: 1;
+        letter-spacing: -0.05em;
+      }
+
+      .lead {
+        max-width: 720px;
+        margin: 16px 0 0;
+        color: var(--muted);
+        line-height: 1.9;
+        font-size: 16px;
+      }
+
+      .section {
+        margin-top: 28px;
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: var(--panel);
+        box-shadow: 0 18px 40px rgba(123, 141, 191, 0.1);
+      }
+
+      .section h2 {
+        margin: 10px 0 0;
+        font-size: 30px;
+        letter-spacing: -0.04em;
+      }
+
+      .section p {
+        margin: 12px 0 0;
+        color: var(--muted);
+        line-height: 1.8;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 24px;
+      }
+
+      .card {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 26px;
+        background: rgba(255, 255, 255, 0.97);
+        box-shadow: 0 16px 38px rgba(123, 141, 191, 0.1);
+      }
+
+      .card-image-wrap {
+        position: relative;
+        aspect-ratio: 16 / 9;
+        background: #dfe8ff;
+      }
+
+      .card-image-wrap img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .card-image-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(18, 26, 51, 0.04), rgba(18, 26, 51, 0.34));
+      }
+
+      .image-badge-row {
+        position: absolute;
+        left: 14px;
+        top: 14px;
+        display: flex;
+        gap: 8px;
+        z-index: 1;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .badge-brand {
+        background: rgba(255, 255, 255, 0.86);
+        color: var(--brand);
+      }
+
+      .badge-soft {
+        background: rgba(18, 26, 51, 0.58);
+        color: white;
+        backdrop-filter: blur(10px);
+      }
+
+      .card-body {
+        padding: 18px 18px 20px;
+      }
+
+      .card-title {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.25;
+        letter-spacing: -0.03em;
+      }
+
+      .meta {
+        display: grid;
+        gap: 8px;
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 18px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .button-primary {
+        background: linear-gradient(180deg, #666cff, #5659ef);
+        color: white;
+        border-color: transparent;
+      }
+
+      .button-secondary {
+        background: rgba(246, 248, 255, 0.92);
+        color: #31405f;
+      }
+
+      .note {
+        margin-top: 20px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: rgba(90, 93, 240, 0.07);
+        color: #4f5a75;
+        line-height: 1.8;
+        font-size: 14px;
+      }
+
+      .mode-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      .mode-card {
+        padding: 18px;
+        border-radius: 22px;
+        border: 1px solid var(--line);
+        background: rgba(248, 250, 255, 0.92);
+      }
+
+      .mode-card h3 {
+        margin: 0;
+        font-size: 18px;
+        letter-spacing: -0.02em;
+      }
+
+      .mode-card p {
+        margin: 10px 0 0;
+        font-size: 14px;
+        line-height: 1.8;
+      }
+
+      @media (max-width: 1024px) {
+        .cards {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 720px) {
+        .wrap {
+          padding: 20px 14px 40px;
+        }
+
+        .hero,
+        .section {
+          padding: 20px;
+          border-radius: 24px;
+        }
+
+        .cards {
+          grid-template-columns: 1fr;
+        }
+
+        .mode-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .card-title {
+          font-size: 22px;
+        }
+
+        .actions {
+          flex-direction: column;
+        }
+
+        .button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="hero">
+        <p class="eyebrow">Preview</p>
+        <h1>大会一覧に画像が入った場合のサンプル</h1>
+        <p class="lead">
+          これは本体の実装前に、見た目の方向だけを確認するためのローカル用プレビューです。
+          大会ごとの画像をカード上部に入れると、一覧の情報量はそのままに、かなり印象が上がります。
+        </p>
+      </section>
+
+      <section class="section">
+        <p class="eyebrow">Tournament Cards</p>
+        <h2>画像つきカードのイメージ</h2>
+        <p>
+          画像を入れるなら、1枚の大会カードの上半分だけに入れて、下半分は今まで通り日付や形式を見せる形が一番使いやすそうです。
+        </p>
+
+        <div class="mode-grid">
+          <div class="mode-card">
+            <p class="eyebrow">Option A</p>
+            <h3>画像を設定した大会</h3>
+            <p>主催者が任意で画像を差し込める形です。イベント写真や告知画像がある大会だけ、より華やかに見せられます。</p>
+          </div>
+          <div class="mode-card">
+            <p class="eyebrow">Option B</p>
+            <h3>画像を設定しない大会</h3>
+            <p>画像未設定なら、標準画像を自動表示します。急いで大会を作るときも見た目が崩れません。</p>
+          </div>
+        </div>
+
+        <div class="cards">
+          <article class="card">
+            <div class="card-image-wrap">
+              <img src="/Users/nishikawayuuki/Desktop/DEA5A14F-7232-4919-B64D-E7284C8EEBEB.png" alt="標準大会イメージ" />
+              <div class="card-image-overlay"></div>
+              <div class="image-badge-row">
+                <span class="badge badge-brand">リーグ戦</span>
+                <span class="badge badge-soft">3本勝負</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <h3 class="card-title">第1回 関東ピックルズ杯</h3>
+              <div class="meta">
+                <span>作成日 2026/06/22</span>
+                <span>2ブロック / 24チーム</span>
+                <span>画像未設定のため標準画像を表示</span>
+              </div>
+              <div class="actions">
+                <a class="button button-primary" href="#">この大会にログイン</a>
+                <a class="button button-secondary" href="#">画像を設定</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-image-wrap">
+              <img src="../public/kanto-pickles-hero.png" alt="設定済み大会イメージ" style="filter: hue-rotate(18deg) saturate(1.08);" />
+              <div class="card-image-overlay"></div>
+              <div class="image-badge-row">
+                <span class="badge badge-brand">総当たり</span>
+                <span class="badge badge-soft">1本勝負</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <h3 class="card-title">初心者歓迎ミックス交流会</h3>
+              <div class="meta">
+                <span>作成日 2026/06/18</span>
+                <span>16組 / スピード進行向け</span>
+                <span>主催者が任意画像を設定済み</span>
+              </div>
+              <div class="actions">
+                <a class="button button-primary" href="#">この大会にログイン</a>
+                <a class="button button-secondary" href="#">画像を設定</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-image-wrap">
+              <img src="/Users/nishikawayuuki/Desktop/DEA5A14F-7232-4919-B64D-E7284C8EEBEB.png" alt="標準大会イメージ" style="filter: hue-rotate(-8deg) saturate(1.06);" />
+              <div class="card-image-overlay"></div>
+              <div class="image-badge-row">
+                <span class="badge badge-brand">トーナメント</span>
+                <span class="badge badge-soft">5本勝負</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <h3 class="card-title">Summer Knockout 2026</h3>
+              <div class="meta">
+                <span>作成日 2026/06/10</span>
+                <span>32組 / ノックアウト形式</span>
+                <span>画像未設定のため標準画像を表示</span>
+              </div>
+              <div class="actions">
+                <a class="button button-primary" href="#">この大会にログイン</a>
+                <a class="button button-secondary" href="#">画像を設定</a>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="note">
+          個人的には、画像は「必須」にせず、画像がない大会は今のシンプルカード、画像がある大会だけこのスタイルにするのがいちばん自然です。
+          そうすると、急ぎで大会を作るときも手間が増えません。
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

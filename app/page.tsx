@@ -18,6 +18,7 @@ type TournamentListItem = {
   format: TournamentFormat;
   block_count: number;
   match_game_count: number;
+  cover_image_url: string | null;
   created_at: string;
 };
 
@@ -50,11 +51,13 @@ export default function HomePage() {
   useRevealOnScroll();
 
   const normalizePin = (value: string) => value.replace(/\D/g, "").slice(0, 4);
+  const defaultTournamentImage = "/tournament-default.png";
 
   const [name, setName] = useState("");
   const [format, setFormat] = useState<TournamentFormat>("round_robin");
   const [blockCount, setBlockCount] = useState(2);
   const [matchGameCount, setMatchGameCount] = useState(1);
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [creatorPin, setCreatorPin] = useState("");
   const [adminPin, setAdminPin] = useState("");
   const [participantPin, setParticipantPin] = useState("");
@@ -84,12 +87,58 @@ export default function HomePage() {
       case "大会を作成できませんでした。":
       case "大会を作成できませんでした。時間をおいて再試行してください。":
         return "大会を作れませんでした。入力内容を確認して、もう一度お試しください。";
+      case "大会画像の読み込みに失敗しました。画像を選び直してください。":
+        return "画像をうまく読み込めませんでした。別の画像でもう一度お試しください。";
       case "大会を削除できませんでした。":
         return "大会を削除できませんでした。作成用PINを確認して、もう一度お試しください。";
       default:
         return text || fallback;
     }
   };
+
+  async function handleCoverImageChange(file: File | null) {
+    if (!file) {
+      setCoverImageUrl(null);
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setMessage({
+        text: "画像ファイルを選んでください。",
+        tone: "error",
+        scope: "create"
+      });
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage({
+        text: "画像は2MB以下にしてください。",
+        tone: "error",
+        scope: "create"
+      });
+      return;
+    }
+
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ""));
+      reader.onerror = () => reject(new Error("read-error"));
+      reader.readAsDataURL(file);
+    }).catch(() => "");
+
+    if (!dataUrl) {
+      setMessage({
+        text: "画像をうまく読み込めませんでした。別の画像でもう一度お試しください。",
+        tone: "error",
+        scope: "create"
+      });
+      return;
+    }
+
+    setCoverImageUrl(dataUrl);
+    setMessage(null);
+  }
 
   const leagueCount = useMemo(
     () => tournaments.filter((tournament) => tournament.format === "league").length,
@@ -132,7 +181,7 @@ export default function HomePage() {
     const response = await fetch("/api/tournaments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, format, adminPin, participantPin, creatorPin, blockCount, matchGameCount })
+      body: JSON.stringify({ name, format, adminPin, participantPin, creatorPin, blockCount, matchGameCount, coverImageUrl })
     });
 
     const payload = (await response.json()) as { slug?: string; error?: string };
@@ -306,13 +355,26 @@ export default function HomePage() {
             <div className="tournament-card-grid mt-6">
               {tournaments.map((tournament) => (
                 <article key={tournament.id} className="tournament-card-light">
+                  <div className="tournament-card-image-wrap">
+                    <img
+                      alt={`${tournament.name}の大会画像`}
+                      className="tournament-card-image"
+                      src={tournament.cover_image_url || defaultTournamentImage}
+                    />
+                    <div className="tournament-card-image-overlay" />
+                    <div className="tournament-card-image-badges">
+                      <span className="premium-badge premium-badge-brand">{formatLabels[tournament.format]}</span>
+                      <span className="premium-badge premium-badge-soft">{tournament.match_game_count}本勝負</span>
+                    </div>
+                  </div>
                   <div className="tournament-card-top">
                     <div className="tournament-badges">
-                      <span className="premium-badge premium-badge-brand">{formatLabels[tournament.format]}</span>
                       {tournament.format === "league" ? (
                         <span className="premium-badge premium-badge-soft">{tournament.block_count}ブロック</span>
                       ) : null}
-                      <span className="premium-badge premium-badge-soft">{tournament.match_game_count}本勝負</span>
+                      <span className="premium-badge premium-badge-neutral">
+                        {tournament.cover_image_url ? "画像設定済み" : "標準画像"}
+                      </span>
                     </div>
                     <h3>{tournament.name}</h3>
                   </div>
@@ -487,6 +549,28 @@ export default function HomePage() {
                   value={participantPin}
                 />
               </label>
+
+              <label className="field field-light">
+                大会画像
+                <input
+                  accept="image/*"
+                  className="input input-light file:mr-3 file:rounded-xl file:border-0 file:bg-[rgba(90,93,240,0.12)] file:px-3 file:py-2 file:font-semibold file:text-[#5a5df0]"
+                  onChange={(event) => void handleCoverImageChange(event.target.files?.[0] ?? null)}
+                  type="file"
+                />
+                <span className="text-sm text-[#6f7b94]">任意設定です。未設定なら標準画像が自動で入ります。</span>
+              </label>
+
+              <div className="sub-panel sub-panel-premium">
+                <p className="text-sm font-semibold text-[#1d2a46]">画像プレビュー</p>
+                <div className="mt-3 overflow-hidden rounded-[20px] border border-[rgba(114,132,181,0.14)] bg-white">
+                  <img
+                    alt="大会画像プレビュー"
+                    className="aspect-[16/9] w-full object-cover"
+                    src={coverImageUrl || defaultTournamentImage}
+                  />
+                </div>
+              </div>
 
               <button className="btn-primary btn-home-primary mt-2" disabled={isSaving} type="submit">
                 {isSaving ? "作成中..." : "大会を作成する"}

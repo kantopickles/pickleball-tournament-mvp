@@ -7,10 +7,13 @@ create table if not exists tournaments (
   format text not null check (format in ('round_robin', 'league', 'tournament')),
   block_count integer not null default 1,
   match_game_count integer not null default 1,
+  cover_image_url text,
   admin_pin_hash text not null,
   participant_pin_hash text not null,
   created_at timestamptz not null default now()
 );
+
+alter table tournaments add column if not exists cover_image_url text;
 
 create table if not exists participants (
   id uuid primary key default gen_random_uuid(),
