@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
 import type { TournamentFormat } from "@/lib/types";
@@ -73,6 +73,8 @@ export default function HomePage() {
   const [message, setMessage] = useState<InlineMessage | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [createModalState, setCreateModalState] = useState<CreateModalState>("closed");
+  const coverLibraryInputRef = useRef<HTMLInputElement | null>(null);
+  const coverCameraInputRef = useRef<HTMLInputElement | null>(null);
 
   const isCreateModalVisible = createModalState !== "closed";
   const isCreateModalClosing = createModalState === "closing";
@@ -395,10 +397,6 @@ export default function HomePage() {
                 直近の大会を開いたり、不要になった大会を作成用PINで削除したりできます。
               </p>
             </div>
-            <div className="mini-stat-card mini-stat-card-light">
-              <span>保存済み</span>
-              <strong>{tournaments.length}</strong>
-            </div>
           </div>
 
           {tournaments.length === 0 ? (
@@ -411,18 +409,20 @@ export default function HomePage() {
             <div className="tournament-card-grid mt-6">
               {tournaments.map((tournament) => (
                 <article key={tournament.id} className="tournament-card-light">
-                  <div className="tournament-card-image-wrap">
-                    <img
-                      alt={`${tournament.name}の大会画像`}
-                      className="tournament-card-image"
-                      src={tournament.cover_image_url || defaultTournamentImage}
-                    />
-                    <div className="tournament-card-image-overlay" />
-                    <div className="tournament-card-image-badges">
-                      <span className="premium-badge premium-badge-brand">{formatLabels[tournament.format]}</span>
-                      <span className="premium-badge premium-badge-soft">{tournament.match_game_count}本勝負</span>
+                  <a className="tournament-card-image-link" href={`/t/${tournament.slug}`}>
+                    <div className="tournament-card-image-wrap">
+                      <img
+                        alt={`${tournament.name}の大会画像`}
+                        className="tournament-card-image"
+                        src={tournament.cover_image_url || defaultTournamentImage}
+                      />
+                      <div className="tournament-card-image-overlay" />
+                      <div className="tournament-card-image-badges">
+                        <span className="premium-badge premium-badge-brand">{formatLabels[tournament.format]}</span>
+                        <span className="premium-badge premium-badge-soft">{tournament.match_game_count}本勝負</span>
+                      </div>
                     </div>
-                  </div>
+                  </a>
                   <div className="tournament-card-top">
                     <div className="tournament-badges">
                       {tournament.format === "league" ? (
@@ -505,7 +505,7 @@ export default function HomePage() {
               <p className="eyebrow">Create</p>
               <h2 className="section-title">大会作成はポップアップで開きます</h2>
               <p className="section-copy">
-                ボタンを押すと、この画面の上にふわっと作成フォームが開きます。
+                ボタンを押すと、この画面の上に作成フォームが開きます。
                 迷わず入力できて、作成後はそのまま大会ページへ移動します。
               </p>
             </div>
@@ -658,11 +658,36 @@ export default function HomePage() {
                 <label className="field field-light">
                   大会画像
                   <input
-                    accept="image/*"
-                    className="input input-light file:mr-3 file:rounded-xl file:border-0 file:bg-[rgba(90,93,240,0.12)] file:px-3 file:py-2 file:font-semibold file:text-[#5a5df0]"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
                     onChange={(event) => void handleCoverImageChange(event.target.files?.[0] ?? null)}
+                    ref={coverLibraryInputRef}
                     type="file"
                   />
+                  <input
+                    accept="image/jpeg,image/png,image/webp"
+                    capture="environment"
+                    className="sr-only"
+                    onChange={(event) => void handleCoverImageChange(event.target.files?.[0] ?? null)}
+                    ref={coverCameraInputRef}
+                    type="file"
+                  />
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <button
+                      className="btn-ghost"
+                      onClick={() => coverLibraryInputRef.current?.click()}
+                      type="button"
+                    >
+                      フォトライブラリから選ぶ
+                    </button>
+                    <button
+                      className="btn-ghost"
+                      onClick={() => coverCameraInputRef.current?.click()}
+                      type="button"
+                    >
+                      写真を撮る
+                    </button>
+                  </div>
                   <span className="text-sm text-[#6f7b94]">任意設定です。未設定なら標準画像が自動で入ります。</span>
                 </label>
 

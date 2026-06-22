@@ -873,6 +873,11 @@ select option {
     box-shadow: 0 16px 38px rgba(123, 141, 191, 0.1);
   }
 
+  .tournament-card-image-link {
+    display: block;
+    border-radius: 24px 24px 0 0;
+  }
+
   .tournament-card-image-wrap {
     position: relative;
     overflow: hidden;
