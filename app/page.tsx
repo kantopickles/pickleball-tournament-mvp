@@ -70,6 +70,7 @@ export default function HomePage() {
   const [deletePins, setDeletePins] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<InlineMessage | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const formatFriendlyMessage = (text: string, fallback: string) => {
     switch (text) {
@@ -192,6 +193,25 @@ export default function HomePage() {
     void loadTournaments();
   }, []);
 
+  useEffect(() => {
+    if (!isCreateModalOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsCreateModalOpen(false);
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isCreateModalOpen]);
+
   async function loadTournaments() {
     const response = await fetch("/api/tournaments");
     const payload = (await response.json()) as { tournaments?: TournamentListItem[]; error?: string };
@@ -232,6 +252,16 @@ export default function HomePage() {
     }
 
     router.push(`/t/${payload.slug}`);
+  }
+
+  function openCreateModal() {
+    setMessage((current) => (current?.scope === "create" ? null : current));
+    setIsCreateModalOpen(true);
+  }
+
+  function closeCreateModal() {
+    if (isSaving) return;
+    setIsCreateModalOpen(false);
   }
 
   async function deleteTournament(slug: string) {
@@ -283,7 +313,9 @@ export default function HomePage() {
 
           <nav className="topnav-links" aria-label="トップメニュー">
             <a href="#tournament-list">大会一覧</a>
-            <a href="#create-tournament">大会を作成</a>
+            <button className="topnav-button" onClick={openCreateModal} type="button">
+              大会を作成
+            </button>
             <a href="#access-guide">使い方</a>
           </nav>
 
@@ -291,9 +323,9 @@ export default function HomePage() {
             <a className="topbar-link" href="#tournament-list">
               既存の大会を見る
             </a>
-            <a className="btn-primary btn-home-primary" href="#create-tournament">
+            <button className="btn-primary btn-home-primary" onClick={openCreateModal} type="button">
               大会を作成
-            </a>
+            </button>
           </div>
         </header>
 
@@ -309,9 +341,9 @@ export default function HomePage() {
               </p>
 
               <div className="hero-cta-row">
-                <a className="btn-primary btn-home-primary" href="#create-tournament">
+                <button className="btn-primary btn-home-primary" onClick={openCreateModal} type="button">
                   大会を作成する
-                </a>
+                </button>
                 <a className="btn-ghost btn-home-secondary" href="#tournament-list">
                   既存の大会を見る
                 </a>
@@ -458,211 +490,266 @@ export default function HomePage() {
           <div className="form-shell form-shell-home" id="create-tournament">
             <div>
               <p className="eyebrow">Create</p>
-              <h2 className="section-title">大会を作成</h2>
+              <h2 className="section-title">大会作成はポップアップで開きます</h2>
               <p className="section-copy">
-                作成後は専用URLへ移動します。参加者登録、ドロー生成、結果入力までそのまま進められます。
+                ボタンを押すと、この画面の上にふわっと作成フォームが開きます。
+                迷わず入力できて、作成後はそのまま大会ページへ移動します。
               </p>
             </div>
-
-            <form className="mt-6 flex flex-col gap-4" onSubmit={createTournament}>
-              <label className="field field-light">
-                大会名
-                <input
-                  className="input input-light"
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="例：第3回 関東ピックルズ杯"
-                  value={name}
-                />
-              </label>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="field field-light">
-                  大会形式
-                  <select
-                    className="input input-light"
-                    onChange={(event) => setFormat(event.target.value as TournamentFormat)}
-                    value={format}
-                  >
-                    {Object.entries(formatLabels).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="field field-light">
-                  1試合あたり
-                  <select
-                    className="input input-light"
-                    onChange={(event) => setMatchGameCount(Number(event.target.value))}
-                    value={matchGameCount}
-                  >
-                    <option value={1}>1本勝負</option>
-                    <option value={3}>3本勝負</option>
-                    <option value={5}>5本勝負</option>
-                  </select>
-                </label>
-              </div>
-
-              {format === "league" ? (
-                <label className="field field-light">
-                  ブロック数
-                  <select
-                    className="input input-light"
-                    onChange={(event) => setBlockCount(Number(event.target.value))}
-                    value={blockCount}
-                  >
-                    {[2, 3, 4, 5, 6, 7, 8].map((count) => (
-                      <option key={count} value={count}>
-                        {count}ブロック
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-
-              <label className="field field-light">
-                作成用PIN
-                <input
-                  className="input input-light"
-                  onChange={(event) => setCreatorPin(event.target.value)}
-                  placeholder="大会作成できる人だけが知るPIN"
-                  type="password"
-                  value={creatorPin}
-                />
-              </label>
-
-              <label className="field field-light">
-                管理者PIN
-                <input
-                  className="input input-light"
-                  inputMode="numeric"
-                  maxLength={4}
-                  onChange={(event) => setAdminPin(normalizePin(event.target.value))}
-                  pattern="[0-9]{4}"
-                  placeholder="4桁の数字"
-                  type="password"
-                  value={adminPin}
-                />
-              </label>
-
-              <label className="field field-light">
-                参加者PIN
-                <input
-                  className="input input-light"
-                  inputMode="numeric"
-                  maxLength={4}
-                  onChange={(event) => setParticipantPin(normalizePin(event.target.value))}
-                  pattern="[0-9]{4}"
-                  placeholder="4桁の数字"
-                  type="password"
-                  value={participantPin}
-                />
-              </label>
-
-              <label className="field field-light">
-                大会画像
-                <input
-                  accept="image/*"
-                  className="input input-light file:mr-3 file:rounded-xl file:border-0 file:bg-[rgba(90,93,240,0.12)] file:px-3 file:py-2 file:font-semibold file:text-[#5a5df0]"
-                  onChange={(event) => void handleCoverImageChange(event.target.files?.[0] ?? null)}
-                  type="file"
-                />
-                <span className="text-sm text-[#6f7b94]">任意設定です。未設定なら標準画像が自動で入ります。</span>
-              </label>
-
-              <div className="sub-panel sub-panel-premium">
-                <p className="text-sm font-semibold text-[#1d2a46]">画像プレビュー</p>
-                <div className="mt-3 overflow-hidden rounded-[20px] border border-[rgba(114,132,181,0.14)] bg-white">
-                  <img
-                    alt="大会画像プレビュー"
-                    className="aspect-[16/9] w-full object-cover"
-                    src={coverImageUrl || defaultTournamentImage}
-                  />
+            <div className="mt-6 grid gap-4">
+              <div className="flow-item">
+                <span className="flow-step">1</span>
+                <div>
+                  <h3>必要事項をまとめて入力</h3>
+                  <p>大会名、形式、PIN、画像までを1つのポップアップで入力できます。</p>
                 </div>
-                {originalCoverImageUrl ? (
-                  <div className="mt-4 grid gap-4">
-                    <div className="crop-control-grid">
-                      <label className="crop-control">
-                        <span>横位置</span>
-                        <input
-                          className="crop-range"
-                          max={100}
-                          min={0}
-                          onChange={(event) => setCoverOffsetX(Number(event.target.value))}
-                          type="range"
-                          value={coverOffsetX}
-                        />
-                      </label>
-                      <label className="crop-control">
-                        <span>縦位置</span>
-                        <input
-                          className="crop-range"
-                          max={100}
-                          min={0}
-                          onChange={(event) => setCoverOffsetY(Number(event.target.value))}
-                          type="range"
-                          value={coverOffsetY}
-                        />
-                      </label>
-                      <label className="crop-control">
-                        <span>拡大</span>
-                        <input
-                          className="crop-range"
-                          max={2.5}
-                          min={1}
-                          onChange={(event) => setCoverZoom(Number(event.target.value))}
-                          step={0.05}
-                          type="range"
-                          value={coverZoom}
-                        />
-                      </label>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        className="btn-ghost"
-                        onClick={() => {
-                          setCoverZoom(1);
-                          setCoverOffsetX(50);
-                          setCoverOffsetY(50);
-                        }}
-                        type="button"
-                      >
-                        位置をリセット
-                      </button>
-                      <button
-                        className="btn-ghost btn-danger-light"
-                        onClick={() => {
-                          setOriginalCoverImageUrl(null);
-                          setCoverImageUrl(null);
-                          setCoverZoom(1);
-                          setCoverOffsetX(50);
-                          setCoverOffsetY(50);
-                        }}
-                        type="button"
-                      >
-                        画像を外す
-                      </button>
-                    </div>
-                    <p className="text-sm text-[#6f7b94]">
-                      LINEのアイコン設定みたいに、使いたい範囲を動かして調整できます。
-                    </p>
-                  </div>
-                ) : null}
               </div>
-
-              <button className="btn-primary btn-home-primary mt-2" disabled={isSaving} type="submit">
-                {isSaving ? "作成中..." : "大会を作成する"}
+              <div className="flow-item">
+                <span className="flow-step">2</span>
+                <div>
+                  <h3>画像もその場で調整</h3>
+                  <p>アップした画像は、そのまま位置と拡大を調整して大会カードに反映できます。</p>
+                </div>
+              </div>
+              <button className="btn-primary btn-home-primary mt-2" onClick={openCreateModal} type="button">
+                大会を作成する
               </button>
-              {message?.scope === "create" ? (
-                <p className={`system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>
-                  {message.text}
-                </p>
-              ) : null}
-            </form>
+            </div>
           </div>
         </section>
+
+        {isCreateModalOpen ? (
+          <div
+            aria-hidden={isSaving}
+            className="create-modal-backdrop"
+            onClick={closeCreateModal}
+            role="presentation"
+          >
+            <div
+              aria-labelledby="create-tournament-modal-title"
+              aria-modal="true"
+              className="create-modal-card form-shell form-shell-home"
+              onClick={(event) => event.stopPropagation()}
+              role="dialog"
+            >
+              <div className="create-modal-head">
+                <div>
+                  <p className="eyebrow">Create</p>
+                  <h2 className="section-title" id="create-tournament-modal-title">大会を作成</h2>
+                  <p className="section-copy">
+                    入力が終わると、そのまま専用の大会ページへ移動します。
+                  </p>
+                </div>
+                <button className="create-modal-close" onClick={closeCreateModal} type="button">
+                  閉じる
+                </button>
+              </div>
+
+              <form className="mt-6 flex flex-col gap-4" onSubmit={createTournament}>
+                <label className="field field-light">
+                  大会名
+                  <input
+                    className="input input-light"
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="例：第3回 関東ピックルズ杯"
+                    value={name}
+                  />
+                </label>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="field field-light">
+                    大会形式
+                    <select
+                      className="input input-light"
+                      onChange={(event) => setFormat(event.target.value as TournamentFormat)}
+                      value={format}
+                    >
+                      {Object.entries(formatLabels).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="field field-light">
+                    1試合あたり
+                    <select
+                      className="input input-light"
+                      onChange={(event) => setMatchGameCount(Number(event.target.value))}
+                      value={matchGameCount}
+                    >
+                      <option value={1}>1本勝負</option>
+                      <option value={3}>3本勝負</option>
+                      <option value={5}>5本勝負</option>
+                    </select>
+                  </label>
+                </div>
+
+                {format === "league" ? (
+                  <label className="field field-light">
+                    ブロック数
+                    <select
+                      className="input input-light"
+                      onChange={(event) => setBlockCount(Number(event.target.value))}
+                      value={blockCount}
+                    >
+                      {[2, 3, 4, 5, 6, 7, 8].map((count) => (
+                        <option key={count} value={count}>
+                          {count}ブロック
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+
+                <label className="field field-light">
+                  作成用PIN
+                  <input
+                    className="input input-light"
+                    onChange={(event) => setCreatorPin(event.target.value)}
+                    placeholder="大会作成できる人だけが知るPIN"
+                    type="password"
+                    value={creatorPin}
+                  />
+                </label>
+
+                <label className="field field-light">
+                  管理者PIN
+                  <input
+                    className="input input-light"
+                    inputMode="numeric"
+                    maxLength={4}
+                    onChange={(event) => setAdminPin(normalizePin(event.target.value))}
+                    pattern="[0-9]{4}"
+                    placeholder="4桁の数字"
+                    type="password"
+                    value={adminPin}
+                  />
+                </label>
+
+                <label className="field field-light">
+                  参加者PIN
+                  <input
+                    className="input input-light"
+                    inputMode="numeric"
+                    maxLength={4}
+                    onChange={(event) => setParticipantPin(normalizePin(event.target.value))}
+                    pattern="[0-9]{4}"
+                    placeholder="4桁の数字"
+                    type="password"
+                    value={participantPin}
+                  />
+                </label>
+
+                <label className="field field-light">
+                  大会画像
+                  <input
+                    accept="image/*"
+                    className="input input-light file:mr-3 file:rounded-xl file:border-0 file:bg-[rgba(90,93,240,0.12)] file:px-3 file:py-2 file:font-semibold file:text-[#5a5df0]"
+                    onChange={(event) => void handleCoverImageChange(event.target.files?.[0] ?? null)}
+                    type="file"
+                  />
+                  <span className="text-sm text-[#6f7b94]">任意設定です。未設定なら標準画像が自動で入ります。</span>
+                </label>
+
+                <div className="sub-panel sub-panel-premium">
+                  <p className="text-sm font-semibold text-[#1d2a46]">画像プレビュー</p>
+                  <div className="mt-3 overflow-hidden rounded-[20px] border border-[rgba(114,132,181,0.14)] bg-white">
+                    <img
+                      alt="大会画像プレビュー"
+                      className="aspect-[16/9] w-full object-cover"
+                      src={coverImageUrl || defaultTournamentImage}
+                    />
+                  </div>
+                  {originalCoverImageUrl ? (
+                    <div className="mt-4 grid gap-4">
+                      <div className="crop-control-grid">
+                        <label className="crop-control">
+                          <span>横位置</span>
+                          <input
+                            className="crop-range"
+                            max={100}
+                            min={0}
+                            onChange={(event) => setCoverOffsetX(Number(event.target.value))}
+                            type="range"
+                            value={coverOffsetX}
+                          />
+                        </label>
+                        <label className="crop-control">
+                          <span>縦位置</span>
+                          <input
+                            className="crop-range"
+                            max={100}
+                            min={0}
+                            onChange={(event) => setCoverOffsetY(Number(event.target.value))}
+                            type="range"
+                            value={coverOffsetY}
+                          />
+                        </label>
+                        <label className="crop-control">
+                          <span>拡大</span>
+                          <input
+                            className="crop-range"
+                            max={2.5}
+                            min={1}
+                            onChange={(event) => setCoverZoom(Number(event.target.value))}
+                            step={0.05}
+                            type="range"
+                            value={coverZoom}
+                          />
+                        </label>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          className="btn-ghost"
+                          onClick={() => {
+                            setCoverZoom(1);
+                            setCoverOffsetX(50);
+                            setCoverOffsetY(50);
+                          }}
+                          type="button"
+                        >
+                          位置をリセット
+                        </button>
+                        <button
+                          className="btn-ghost btn-danger-light"
+                          onClick={() => {
+                            setOriginalCoverImageUrl(null);
+                            setCoverImageUrl(null);
+                            setCoverZoom(1);
+                            setCoverOffsetX(50);
+                            setCoverOffsetY(50);
+                          }}
+                          type="button"
+                        >
+                          画像を外す
+                        </button>
+                      </div>
+                      <p className="text-sm text-[#6f7b94]">
+                        LINEのアイコン設定みたいに、使いたい範囲を動かして調整できます。
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="create-modal-actions">
+                  <button className="btn-ghost" onClick={closeCreateModal} type="button">
+                    キャンセル
+                  </button>
+                  <button className="btn-primary btn-home-primary" disabled={isSaving} type="submit">
+                    {isSaving ? "作成中..." : "大会を作成する"}
+                  </button>
+                </div>
+                {message?.scope === "create" ? (
+                  <p className={`system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>
+                    {message.text}
+                  </p>
+                ) : null}
+              </form>
+            </div>
+          </div>
+        ) : null}
       </section>
     </main>
   );

@@ -150,8 +150,17 @@ select option {
   }
 
   .topnav-links a:hover,
+  .topnav-button:hover,
   .topbar-link:hover {
     color: var(--brand);
+  }
+
+  .topnav-button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
   }
 
   .topbar-actions {
@@ -679,6 +688,42 @@ select option {
     @apply grid gap-6 lg:grid-cols-[1.08fr_0.92fr];
   }
 
+  .create-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgba(18, 28, 51, 0.34);
+    backdrop-filter: blur(12px);
+    animation: modal-fade-in 220ms ease forwards;
+  }
+
+  .create-modal-card {
+    width: min(100%, 780px);
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    animation: modal-rise-in 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .create-modal-head {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between;
+  }
+
+  .create-modal-close {
+    @apply inline-flex items-center justify-center px-4 py-3 text-sm font-semibold;
+    align-self: flex-start;
+    border-radius: 18px;
+    border: 1px solid rgba(118, 135, 179, 0.16);
+    background: rgba(255, 255, 255, 0.78);
+    color: var(--muted-strong);
+  }
+
+  .create-modal-actions {
+    @apply flex flex-col-reverse gap-3 sm:flex-row sm:justify-end;
+  }
+
   .mini-stat-card {
     @apply inline-flex flex-col gap-1 px-4 py-3;
     border-radius: 20px;
@@ -868,5 +913,27 @@ select option {
 
   .status-chip {
     @apply rounded-full border px-2.5 py-1 text-xs font-bold;
+  }
+}
+
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
