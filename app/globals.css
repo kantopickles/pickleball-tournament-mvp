@@ -538,29 +538,29 @@ select option {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 1rem 1.2rem;
+    padding: 0.8rem 1rem;
   }
 
   .format-board-kicker {
     margin: 0;
-    font-size: 0.92rem;
+    font-size: 0.82rem;
     font-weight: 800;
     letter-spacing: 0.04em;
     color: #5166f4;
   }
 
   .format-board-copy-item h2 {
-    margin: 1rem 0 0;
-    font-size: clamp(2rem, 3vw, 3.2rem);
+    margin: 0.7rem 0 0;
+    font-size: clamp(1.65rem, 2.4vw, 2.7rem);
     line-height: 1.08;
     letter-spacing: -0.04em;
     color: #16213d;
   }
 
   .format-board-copy-item p:last-child {
-    margin: 1rem 0 0;
-    font-size: clamp(1rem, 1.25vw, 1.18rem);
-    line-height: 1.75;
+    margin: 0.8rem 0 0;
+    font-size: clamp(0.88rem, 1vw, 1.02rem);
+    line-height: 1.6;
     font-weight: 600;
     color: #22304f;
   }
@@ -581,7 +581,7 @@ select option {
     }
 
     .format-board-copy-item {
-      padding: 1.2rem 1.15rem;
+      padding: 1rem 1rem;
       border-top: 1px solid rgba(114, 132, 181, 0.12);
     }
 
@@ -590,12 +590,12 @@ select option {
     }
 
     .format-board-copy-item h2 {
-      font-size: 2rem;
+      font-size: 1.75rem;
     }
 
     .format-board-copy-item p:last-child {
-      font-size: 0.98rem;
-      line-height: 1.7;
+      font-size: 0.92rem;
+      line-height: 1.6;
     }
   }
 
