@@ -350,11 +350,14 @@ export default function HomePage() {
               <div className="marketing-chip">Tournament operations for real matchday</div>
               <h1 className="hero-home-title">
                 <span>Kanto</span>
-                <span>Pickle&apos;s Draw</span>
+                <span className="hero-home-title-line">
+                  <span>Pickle&apos;s </span>
+                  <span className="hero-home-title-accent">Draw</span>
+                </span>
               </h1>
               <p className="hero-home-subtitle">
-                <span>大会運営をもっと</span>
-                <span>シンプルに</span>
+                <span>大会運営を</span>
+                <span className="hero-home-subtitle-accent">もっとシンプルに</span>
               </p>
               <div className="hero-copy-divider" />
               <p className="hero-home-value">すべての1戦に価値を。</p>
