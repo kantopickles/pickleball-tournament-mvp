@@ -365,39 +365,23 @@ export default function HomePage() {
           </div>
 
           <div className="hero-home-mobile">
-            <div className="hero-home-grid">
-              <div className="hero-copy">
-                <div className="marketing-chip">Tournament operations for real matchday</div>
-                <h1 className="hero-home-title">Kanto Pickle&apos;s Draw</h1>
-                <p className="hero-home-subtitle">
-                  <span>大会運営をもっと</span>
-                  <span>シンプルに</span>
-                </p>
-                <p className="hero-home-lead">
-                  大会作成、PIN管理、結果入力、順位反映まで。
-                  ピックルボール大会の運営を、この画面からシンプルに管理できます。
-                </p>
-
-                <div className="hero-cta-row">
-                  <button className="btn-primary btn-home-primary" onClick={openCreateModal} type="button">
-                    大会を作成する
-                  </button>
-                  <a className="btn-ghost btn-home-secondary" href="#tournament-list">
-                    既存の大会を見る
-                  </a>
-                </div>
-              </div>
-
-              <div className="hero-visual">
-                <div className="hero-visual-card">
-                  <img
-                    alt="Pickleball tournament hero"
-                    className="hero-visual-image"
-                    src="/kanto-pickles-hero.png"
-                  />
-                  <div className="hero-visual-overlay" />
-                </div>
-              </div>
+            <div className="hero-home-mobile-exact">
+              <img
+                alt="Kanto Pickle's Draw hero mobile"
+                className="hero-home-mobile-image"
+                src="/hero-mobile-exact.png"
+              />
+              <button
+                aria-label="大会を作成する"
+                className="hero-image-hotspot hero-image-hotspot-mobile-create"
+                onClick={openCreateModal}
+                type="button"
+              />
+              <a
+                aria-label="既存の大会を見る"
+                className="hero-image-hotspot hero-image-hotspot-mobile-list"
+                href="#tournament-list"
+              />
             </div>
           </div>
         </section>
