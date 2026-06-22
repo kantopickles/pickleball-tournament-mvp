@@ -19,5 +19,5 @@ export async function PATCH(request: Request, { params }: { params: { slug: stri
   if (error) return jsonError("参加者PINを更新できませんでした。", 500);
 
   const snapshot = await getSnapshot(params.slug);
-  return Response.json(snapshot);
+  return Response.json({ snapshot, participantPin });
 }

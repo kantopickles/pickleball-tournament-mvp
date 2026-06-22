@@ -1,4 +1,5 @@
 import { getSnapshot, getTournamentBySlug, jsonError, verifyAdminPin, verifyParticipantPin } from "@/lib/api";
+import { recoverFourDigitPin } from "@/lib/pins";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request, { params }: { params: { slug: string } }) {
@@ -17,7 +18,11 @@ export async function POST(request: Request, { params }: { params: { slug: strin
     const snapshot = await getSnapshot(params.slug);
     if (!snapshot) return jsonError("大会が見つかりません。", 404);
 
-    return NextResponse.json({ role: "admin", snapshot });
+    return NextResponse.json({
+      role: "admin",
+      snapshot,
+      participantPin: recoverFourDigitPin(tournament.participant_pin_hash)
+    });
   }
 
   const tournament = await getTournamentBySlug(params.slug);

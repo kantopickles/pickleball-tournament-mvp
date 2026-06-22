@@ -22,6 +22,17 @@ type SavedAccess = {
   pin: string;
   participantId?: string;
 };
+type AccessSuccess = {
+  role: "participant" | "admin";
+  snapshot: TournamentSnapshot;
+  participantPin?: string | null;
+};
+type SnapshotResponse =
+  | TournamentSnapshot
+  | {
+      snapshot: TournamentSnapshot;
+      participantPin?: string | null;
+    };
 
 export default function TournamentScreen({ slug }: { slug: string }) {
   useRevealOnScroll();
@@ -39,6 +50,11 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const [participantName, setParticipantName] = useState("");
   const [participantBlockNumber, setParticipantBlockNumber] = useState(1);
   const [commonParticipantPin, setCommonParticipantPin] = useState("");
+  const [revealedParticipantPin, setRevealedParticipantPin] = useState("");
+  const [tournamentNameDraft, setTournamentNameDraft] = useState("");
+  const [editingParticipantId, setEditingParticipantId] = useState("");
+  const [editingParticipantName, setEditingParticipantName] = useState("");
+  const [editingParticipantBlockNumber, setEditingParticipantBlockNumber] = useState(1);
   const [message, setMessage] = useState<InlineMessage | null>(null);
   const [scoreDraft, setScoreDraft] = useState<ScoreDraft>({});
   const [swapDraft, setSwapDraft] = useState<SwapDraft>({});
@@ -171,9 +187,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pin, mode })
     });
-    const payload = (await response.json()) as
-      | { role: "participant" | "admin"; snapshot: TournamentSnapshot }
-      | { error: string };
+    const payload = (await response.json()) as AccessSuccess | { error: string };
     setIsBusy(false);
 
     if (!response.ok || !("snapshot" in payload)) {
@@ -191,6 +205,8 @@ export default function TournamentScreen({ slug }: { slug: string }) {
       setAdminPin(pin);
       setIsAdminMode(true);
       setIsAdminAuthenticated(true);
+      setRevealedParticipantPin(payload.participantPin ?? "");
+      setTournamentNameDraft(payload.snapshot.tournament.name);
       saveStoredAccess({ mode: "admin", pin });
     } else {
       setParticipantPin(pin);
@@ -282,6 +298,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   useEffect(() => {
     if (!snapshot) return;
     setCoverImageUrl(snapshot.tournament.cover_image_url ?? null);
+    setTournamentNameDraft(snapshot.tournament.name);
   }, [snapshot?.tournament.cover_image_url, snapshot]);
 
   useEffect(() => {
@@ -291,6 +308,17 @@ export default function TournamentScreen({ slug }: { slug: string }) {
       return Math.min(Math.max(current, 1), maxBlock);
     });
   }, [snapshot?.tournament.block_count, snapshot]);
+
+  useEffect(() => {
+    if (!snapshot || !editingParticipantId) return;
+
+    const participant = snapshot.participants.find((item) => item.id === editingParticipantId);
+    if (!participant) {
+      setEditingParticipantId("");
+      setEditingParticipantName("");
+      setEditingParticipantBlockNumber(1);
+    }
+  }, [editingParticipantId, snapshot]);
 
   useEffect(() => {
     if (!originalCoverImageUrl) return;
@@ -347,7 +375,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
       ...init,
       headers: { "Content-Type": "application/json", ...(init.headers ?? {}) }
     });
-    const payload = (await response.json()) as TournamentSnapshot | { error: string };
+    const payload = (await response.json()) as SnapshotResponse | { error: string };
     setIsBusy(false);
 
     if (!response.ok) {
@@ -355,9 +383,14 @@ export default function TournamentScreen({ slug }: { slug: string }) {
       return false;
     }
 
+    const nextPayload = payload as SnapshotResponse;
+    const nextSnapshot = "snapshot" in nextPayload ? nextPayload.snapshot : nextPayload;
     startTransition(() => {
-      setSnapshot(payload as TournamentSnapshot);
+      setSnapshot(nextSnapshot);
     });
+    if ("snapshot" in nextPayload && nextPayload.participantPin !== undefined) {
+      setRevealedParticipantPin(nextPayload.participantPin ?? "");
+    }
     return true;
   }
 
@@ -485,6 +518,43 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     if (ok) {
       setOriginalCoverImageUrl(null);
       showMessage("admin", "success", coverImageUrl ? "大会トップ画像を更新しました。" : "大会トップ画像を標準画像に戻しました。", "");
+    }
+  }
+
+  async function updateTournamentName() {
+    const ok = await requestSnapshot(`/api/tournaments/${slug}`, {
+      method: "PATCH",
+      body: JSON.stringify({ adminPin, name: tournamentNameDraft })
+    }, "admin");
+    if (ok) {
+      showMessage("admin", "success", "大会名を更新しました。", "");
+    }
+  }
+
+  function startParticipantEdit(participant: PublicParticipant) {
+    setEditingParticipantId(participant.id);
+    setEditingParticipantName(participant.name);
+    setEditingParticipantBlockNumber(participant.block_number);
+  }
+
+  function cancelParticipantEdit() {
+    setEditingParticipantId("");
+    setEditingParticipantName("");
+    setEditingParticipantBlockNumber(1);
+  }
+
+  async function updateParticipant(participant: PublicParticipant) {
+    const ok = await requestSnapshot(`/api/tournaments/${slug}/participants/${participant.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        adminPin,
+        name: editingParticipantName,
+        blockNumber: editingParticipantBlockNumber
+      })
+    }, "admin");
+    if (ok) {
+      showMessage("admin", "success", `${participant.name}の情報を更新しました。`, "");
+      cancelParticipantEdit();
     }
   }
 
@@ -886,6 +956,33 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 </p>
                 <div className="sub-panel grid gap-2">
                   <label className="field">
+                    大会名を変更
+                    <input
+                      className="input"
+                      disabled={!canUseAdminTools}
+                      onChange={(event) => setTournamentNameDraft(event.target.value)}
+                      placeholder="大会名"
+                      value={tournamentNameDraft}
+                    />
+                  </label>
+                  <button
+                    className="btn-ghost py-3 text-base"
+                    disabled={isBusy || !canUseAdminTools}
+                    onClick={() => void updateTournamentName()}
+                    type="button"
+                  >
+                    大会名を更新
+                  </button>
+                </div>
+                <div className="sub-panel grid gap-2">
+                  {isAdminAuthenticated ? (
+                    <div className="rounded-[20px] border border-[rgba(90,93,240,0.12)] bg-[rgba(90,93,240,0.06)] px-4 py-3">
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#5a5df0]">Participant PIN</p>
+                      <p className="mt-2 text-2xl font-bold tracking-[0.2em] text-[#1e2a4a]">{revealedParticipantPin || "----"}</p>
+                      <p className="mt-1 text-sm text-[#6f7b94]">参加者から聞かれたとき用に、管理者ログイン中だけ確認できます。</p>
+                    </div>
+                  ) : null}
+                  <label className="field">
                     参加者共通PINを変更
                     <input
                       className="input"
@@ -1112,7 +1209,64 @@ export default function TournamentScreen({ slug }: { slug: string }) {
             {snapshot.participants.length === 0 ? <p className="text-sm text-[#6f7b94]">まだ参加者はいません。</p> : null}
             {snapshot.participants.map((participant) => (
               <div key={participant.id} className="flex items-center justify-between gap-3 rounded-[24px] border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.92)] px-3 py-3 text-sm">
-                <span className="min-w-0 truncate font-semibold">{participant.name}</span>
+                <div className="min-w-0 flex-1">
+                  {editingParticipantId === participant.id ? (
+                    <div className="grid gap-2">
+                      <input
+                        className="input"
+                        disabled={isBusy || !canUseAdminTools}
+                        onChange={(event) => setEditingParticipantName(event.target.value)}
+                        value={editingParticipantName}
+                      />
+                      {snapshot.tournament.format === "league" ? (
+                        <select
+                          className="input"
+                          disabled={isBusy || !canUseAdminTools}
+                          onChange={(event) => setEditingParticipantBlockNumber(Number(event.target.value))}
+                          value={editingParticipantBlockNumber}
+                        >
+                          {Array.from({ length: Math.max(snapshot.tournament.block_count ?? 1, 1) }, (_, index) => index + 1).map((blockNumber) => (
+                            <option key={blockNumber} value={blockNumber}>
+                              ブロック{blockNumber}
+                            </option>
+                          ))}
+                        </select>
+                      ) : null}
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          className="rounded btn-ghost px-3 py-2"
+                          disabled={isBusy || !canUseAdminTools}
+                          onClick={() => void updateParticipant(participant)}
+                          type="button"
+                        >
+                          変更を保存
+                        </button>
+                        <button
+                          className="rounded btn-danger-ghost px-3 py-2"
+                          disabled={isBusy || !canUseAdminTools}
+                          onClick={cancelParticipantEdit}
+                          type="button"
+                        >
+                          キャンセル
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="min-w-0 truncate font-semibold">{participant.name}</span>
+                      {isAdminMode ? (
+                        <button
+                          className="rounded btn-ghost px-2 py-1 text-xs"
+                          disabled={isBusy || !canUseAdminTools}
+                          onClick={() => startParticipantEdit(participant)}
+                          type="button"
+                        >
+                          変更
+                        </button>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="rounded-full bg-[rgba(243,246,255,0.94)] px-2 py-1 text-xs text-[#6f7b94]">#{participant.seed}</span>
                   {snapshot.tournament.format === "league" ? <span className="rounded-full bg-[rgba(90,93,240,0.1)] px-2 py-1 text-xs text-[#5a5df0]">ブロック{participant.block_number}</span> : null}
@@ -1480,9 +1634,9 @@ function Bracket({
       <p className="eyebrow">Bracket</p>
       <h2 className="text-lg font-bold">{title}</h2>
       <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
-        {rounds.map((round) => (
+        {rounds.map((round, roundIndex) => (
           <div key={round[0]?.round ?? "empty"} className="min-w-56 flex-1">
-            <p className="mb-2 text-sm font-bold text-[#5a5df0]">Round {(round[0]?.round ?? 0) - roundOffset}</p>
+            <p className="mb-2 text-sm font-bold text-[#5a5df0]">{bracketRoundLabel(roundIndex, rounds.length)}</p>
             <div className="grid gap-2">
               {round.map((match) => (
                 <BracketMatch key={match.id} match={match} participantById={participantById} onSelectMatch={onSelectMatch} canSelectMatch={canSelectMatch} />
@@ -1614,4 +1768,11 @@ function playoffTitleFromOffset(offset: number) {
   const rankStart = Math.floor(encoded / 100);
   const rankEnd = Math.floor((encoded % 100) / 10);
   return playoffTitle(rankStart, rankEnd);
+}
+
+function bracketRoundLabel(roundIndex: number, totalRounds: number) {
+  if (totalRounds <= 0) return "1回戦";
+  if (roundIndex === totalRounds - 1) return "決勝戦";
+  if (roundIndex === totalRounds - 2) return "準決勝戦";
+  return `${roundIndex + 1}回戦`;
 }

@@ -1,4 +1,5 @@
 import { getSnapshot, jsonError, verifyAdminPin } from "@/lib/api";
+import { recoverFourDigitPin } from "@/lib/pins";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { NextResponse } from "next/server";
 
@@ -28,23 +29,32 @@ export async function PATCH(request: Request, { params }: { params: { slug: stri
   const body = (await request.json()) as {
     adminPin?: string;
     coverImageUrl?: string | null;
+    name?: string;
   };
 
   const adminPin = body.adminPin?.trim();
   const coverImageUrl = body.coverImageUrl?.trim() || null;
+  const name = body.name?.trim();
 
   if (!adminPin) return jsonError("管理者PINを入力してください。", 400);
   if (coverImageUrl && !coverImageUrl.startsWith("data:image/")) {
     return jsonError("大会画像の読み込みに失敗しました。画像を選び直してください。", 400);
   }
+  if (body.name !== undefined && !name) {
+    return jsonError("大会名を入力してください。", 400);
+  }
 
   const tournament = await verifyAdminPin(params.slug, adminPin);
   if (!tournament) return jsonError("管理者PINが違います。", 403);
 
+  const updateData: { cover_image_url?: string | null; name?: string } = {};
+  if (body.coverImageUrl !== undefined) updateData.cover_image_url = coverImageUrl;
+  if (body.name !== undefined) updateData.name = name;
+
   const supabase = getSupabaseAdmin();
   const { error } = await supabase
     .from("tournaments")
-    .update({ cover_image_url: coverImageUrl })
+    .update(updateData)
     .eq("id", tournament.id);
 
   if (error?.message?.includes("cover_image_url")) {
@@ -55,5 +65,8 @@ export async function PATCH(request: Request, { params }: { params: { slug: stri
   const snapshot = await getSnapshot(params.slug);
   if (!snapshot) return jsonError("大会が見つかりません。", 404);
 
-  return NextResponse.json(snapshot);
+  return NextResponse.json({
+    snapshot,
+    participantPin: recoverFourDigitPin(tournament.participant_pin_hash)
+  });
 }
