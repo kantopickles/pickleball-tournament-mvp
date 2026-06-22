@@ -106,12 +106,24 @@ export default function TournamentScreen({ slug }: { slug: string }) {
 
   function saveStoredAccess(next: SavedAccess) {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(storageKey, JSON.stringify(next));
+
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(next));
+    } catch {
+      // localStorage is optional. If the browser blocks it, we keep the page usable without persisting access.
+    }
   }
 
   function readStoredAccess() {
     if (typeof window === "undefined") return null;
-    const raw = window.localStorage.getItem(storageKey);
+    let raw: string | null = null;
+
+    try {
+      raw = window.localStorage.getItem(storageKey);
+    } catch {
+      return null;
+    }
+
     if (!raw) return null;
 
     try {
@@ -123,11 +135,25 @@ export default function TournamentScreen({ slug }: { slug: string }) {
 
   function clearStoredAccess() {
     if (typeof window === "undefined") return;
-    window.localStorage.removeItem(storageKey);
+
+    try {
+      window.localStorage.removeItem(storageKey);
+    } catch {
+      // Ignore browsers that block localStorage removal.
+    }
   }
 
   async function waitForNextPaint() {
-    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+    if (typeof window === "undefined") return;
+
+    await new Promise<void>((resolve) => {
+      if (typeof window.requestAnimationFrame === "function") {
+        window.requestAnimationFrame(() => resolve());
+        return;
+      }
+
+      window.setTimeout(() => resolve(), 0);
+    });
   }
 
   async function requestAccess(
@@ -280,6 +306,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     }
 
     let cancelled = false;
+    if (typeof Image === "undefined") return;
     const image = new Image();
 
     image.onload = () => {
@@ -724,7 +751,14 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               <span className="break-all text-[#6f7b94]">{shareUrl}</span>
               <button
                 className="btn-warning"
-                onClick={() => void navigator.clipboard.writeText(shareUrl)}
+                onClick={() => {
+                  if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+                    showMessage("admin", "error", "この端末ではコピーが使えませんでした。URLを長押ししてコピーしてください。", "共有URLをコピーできませんでした。");
+                    return;
+                  }
+
+                  void navigator.clipboard.writeText(shareUrl);
+                }}
                 type="button"
               >
                 共有URLをコピー
