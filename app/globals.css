@@ -582,39 +582,46 @@ select option {
 
     .format-board-copy-item {
       position: absolute;
-      left: 5%;
-      width: 44%;
+      left: 5.3%;
+      width: 39.8%;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: flex-start;
       padding: 0;
       border-top: 0;
     }
 
     .format-board-copy-item:nth-child(1) {
-      top: 3.7%;
+      top: 4.05%;
+      min-height: 12.8%;
     }
 
     .format-board-copy-item:nth-child(2) {
-      top: 30.9%;
+      top: 31.45%;
+      min-height: 15.2%;
     }
 
     .format-board-copy-item:nth-child(3) {
-      top: 67.9%;
+      top: 68.35%;
+      min-height: 13.7%;
     }
 
     .format-board-kicker {
-      font-size: 0.78rem;
+      font-size: 0.74rem;
       letter-spacing: 0.05em;
     }
 
     .format-board-copy-item h2 {
-      margin-top: 0.58rem;
-      font-size: 1.58rem;
-      line-height: 1.08;
+      margin-top: 0.52rem;
+      font-size: 1.5rem;
+      line-height: 1.04;
     }
 
     .format-board-copy-item p:last-child {
-      margin-top: 0.62rem;
-      font-size: 0.72rem;
-      line-height: 1.6;
+      margin-top: 0.56rem;
+      font-size: 0.69rem;
+      line-height: 1.52;
     }
   }
 
