@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, PointerEvent as ReactPointerEvent, startTransition, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
 import type { TournamentFormat } from "@/lib/types";
@@ -74,6 +74,9 @@ export default function HomePage() {
   const [message, setMessage] = useState<InlineMessage | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [createModalState, setCreateModalState] = useState<CreateModalState>("closed");
+  const [pendingDeleteSlug, setPendingDeleteSlug] = useState<string | null>(null);
+  const [pendingDeletePin, setPendingDeletePin] = useState("");
+  const [deletingSlug, setDeletingSlug] = useState<string | null>(null);
   const coverLibraryInputRef = useRef<HTMLInputElement | null>(null);
   const coverCameraInputRef = useRef<HTMLInputElement | null>(null);
   const cropDragStateRef = useRef<{ pointerId: number; startX: number; startY: number; startOffsetX: number; startOffsetY: number } | null>(null);
@@ -109,6 +112,8 @@ export default function HomePage() {
         return "画像サイズが大きすぎます。15MB以下の画像を選んでください。";
       case "大会を削除できませんでした。":
         return "大会を削除できませんでした。作成用PINを確認して、もう一度お試しください。";
+      case "削除するには作成用PINを入力してください。":
+        return "削除するには作成用PINを入力してください。";
       default:
         return text || fallback;
     }
@@ -240,6 +245,10 @@ export default function HomePage() {
     setTournaments(payload.tournaments ?? []);
   }
 
+  async function waitForNextPaint() {
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+  }
+
   async function createTournament(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSaving(true);
@@ -283,17 +292,39 @@ export default function HomePage() {
     }, 260);
   }
 
+  function openDeletePrompt(slug: string) {
+    setMessage((current) => (current?.scope === "list" ? null : current));
+    setPendingDeleteSlug(slug);
+    setPendingDeletePin("");
+  }
+
+  function closeDeletePrompt() {
+    setPendingDeleteSlug(null);
+    setPendingDeletePin("");
+  }
+
   async function deleteTournament(slug: string) {
-    const creatorPin = window.prompt("削除するには作成用PINを入力してください。")?.trim() ?? "";
-    if (!creatorPin) return;
+    const creatorPin = pendingDeletePin.trim();
+    if (!creatorPin) {
+      setMessage({
+        text: "削除するには作成用PINを入力してください。",
+        tone: "error",
+        scope: "list"
+      });
+      return;
+    }
 
     setMessage(null);
+    setDeletingSlug(slug);
+    await waitForNextPaint();
+
     const response = await fetch(`/api/tournaments/${slug}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ creatorPin })
     });
     const payload = (await response.json()) as { ok?: boolean; error?: string };
+    setDeletingSlug(null);
 
     if (!response.ok || !payload.ok) {
       setMessage({
@@ -303,12 +334,16 @@ export default function HomePage() {
       });
       return;
     }
+
+    startTransition(() => {
+      setTournaments((current) => current.filter((tournament) => tournament.slug !== slug));
+    });
+    closeDeletePrompt();
     setMessage({
       text: "大会を削除しました。",
       tone: "success",
       scope: "list"
     });
-    await loadTournaments();
   }
 
   function handleCropDragStart(event: ReactPointerEvent<HTMLDivElement>) {
@@ -485,13 +520,45 @@ export default function HomePage() {
                   </a>
 
                   <div className="tournament-delete-row">
-                    <button
-                      className="btn-ghost btn-danger-light"
-                      onClick={() => void deleteTournament(tournament.slug)}
-                      type="button"
-                    >
-                      削除
-                    </button>
+                    {pendingDeleteSlug === tournament.slug ? (
+                      <div className="grid gap-2">
+                        <input
+                          className="input input-light"
+                          inputMode="text"
+                          onChange={(event) => setPendingDeletePin(event.target.value)}
+                          placeholder="作成用PIN"
+                          type="password"
+                          value={pendingDeletePin}
+                        />
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <button
+                            className="btn-ghost"
+                            disabled={deletingSlug === tournament.slug}
+                            onClick={closeDeletePrompt}
+                            type="button"
+                          >
+                            キャンセル
+                          </button>
+                          <button
+                            className="btn-ghost btn-danger-light"
+                            disabled={deletingSlug === tournament.slug}
+                            onClick={() => void deleteTournament(tournament.slug)}
+                            type="button"
+                          >
+                            {deletingSlug === tournament.slug ? "削除中..." : "削除を確定"}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        className="btn-ghost btn-danger-light"
+                        disabled={deletingSlug === tournament.slug}
+                        onClick={() => openDeletePrompt(tournament.slug)}
+                        type="button"
+                      >
+                        削除
+                      </button>
+                    )}
                   </div>
                 </article>
               ))}

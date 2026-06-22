@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, startTransition, useEffect, useMemo, useState } from "react";
 import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
 import type { Match, PublicParticipant, TournamentFormat, TournamentSnapshot } from "@/lib/types";
 
@@ -45,6 +45,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [isRestoringAccess, setIsRestoringAccess] = useState(true);
+  const [isConfirmingDrawReset, setIsConfirmingDrawReset] = useState(false);
 
   const participantById = useMemo(() => {
     const map = new Map<string, PublicParticipant>();
@@ -114,6 +115,10 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     window.localStorage.removeItem(storageKey);
   }
 
+  async function waitForNextPaint() {
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+  }
+
   async function requestAccess(
     pin: string,
     mode: "participant" | "admin",
@@ -122,6 +127,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   ) {
     setIsBusy(true);
     if (!silent) setMessage(null);
+    await waitForNextPaint();
 
     const response = await fetch(`/api/tournaments/${slug}/access`, {
       method: "POST",
@@ -140,7 +146,9 @@ export default function TournamentScreen({ slug }: { slug: string }) {
       return null;
     }
 
-    setSnapshot(payload.snapshot);
+    startTransition(() => {
+      setSnapshot(payload.snapshot);
+    });
 
     if (payload.role === "admin") {
       setAdminPin(pin);
@@ -163,6 +171,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   async function requestParticipantLogin(pin: string, participantId: string, silent = false) {
     setIsBusy(true);
     if (!silent) setMessage(null);
+    await waitForNextPaint();
 
     const response = await fetch(`/api/tournaments/${slug}/participant-login`, {
       method: "POST",
@@ -236,6 +245,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   async function requestSnapshot(path: string, init: RequestInit, scope: InlineMessage["scope"]) {
     setIsBusy(true);
     setMessage(null);
+    await waitForNextPaint();
     const response = await fetch(path, {
       ...init,
       headers: { "Content-Type": "application/json", ...(init.headers ?? {}) }
@@ -248,7 +258,9 @@ export default function TournamentScreen({ slug }: { slug: string }) {
       return false;
     }
 
-    setSnapshot(payload as TournamentSnapshot);
+    startTransition(() => {
+      setSnapshot(payload as TournamentSnapshot);
+    });
     return true;
   }
 
@@ -299,7 +311,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     if (ok) showMessage("admin", "success", `${participant.name}を削除しました。`, "");
   }
 
-  async function generateDraw() {
+  async function generateDraw(force = false) {
     const hasRecordedMatchResult = snapshot?.matches.some(
       (match) =>
         match.locked ||
@@ -308,16 +320,20 @@ export default function TournamentScreen({ slug }: { slug: string }) {
         Boolean(match.game_scores?.length)
     );
 
-    if (hasRecordedMatchResult) {
-      const confirmed = window.confirm("今入力されている試合結果は全て削除されます。よろしいですか？");
-      if (!confirmed) return;
+    if (hasRecordedMatchResult && !force) {
+      setIsConfirmingDrawReset(true);
+      return;
     }
 
+    setIsConfirmingDrawReset(false);
     const ok = await requestSnapshot(`/api/tournaments/${slug}/generate`, {
       method: "POST",
       body: JSON.stringify({ adminPin })
     }, "admin");
-    if (ok) showMessage("admin", "success", "ドロー表を生成しました。", "");
+    if (ok) {
+      setIsConfirmingDrawReset(false);
+      showMessage("admin", "success", "ドロー表を生成しました。", "");
+    }
   }
 
   async function updateParticipantPin() {
@@ -755,7 +771,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               <h2 className="text-lg font-bold">参加者</h2>
             </div>
             {isAdminMode ? (
-              <button className="btn-danger px-3 py-2 text-sm" disabled={isBusy || !canUseAdminTools} onClick={generateDraw} type="button">
+              <button className="btn-danger px-3 py-2 text-sm" disabled={isBusy || !canUseAdminTools} onClick={() => void generateDraw()} type="button">
                 ドロー生成
               </button>
             ) : null}
@@ -782,6 +798,29 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               </div>
             ))}
           </div>
+          {isAdminMode && isConfirmingDrawReset ? (
+            <div className="mt-4 grid gap-2 rounded-[24px] border border-[rgba(232,109,109,0.18)] bg-[rgba(255,244,244,0.94)] p-4">
+              <p className="text-sm font-semibold text-[#9f3f3f]">今入力されている試合結果はすべて削除されます。再生成してよければ下のボタンを押してください。</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button
+                  className="btn-ghost"
+                  disabled={isBusy}
+                  onClick={() => setIsConfirmingDrawReset(false)}
+                  type="button"
+                >
+                  キャンセル
+                </button>
+                <button
+                  className="btn-danger"
+                  disabled={isBusy || !canUseAdminTools}
+                  onClick={() => void generateDraw(true)}
+                  type="button"
+                >
+                  {isBusy ? "再生成中..." : "結果を消して再生成"}
+                </button>
+              </div>
+            </div>
+          ) : null}
         </section>
 
         {snapshot.tournament.format === "tournament" ? (
