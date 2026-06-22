@@ -37,6 +37,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const [selectedParticipantId, setSelectedParticipantId] = useState("");
   const [activeParticipantId, setActiveParticipantId] = useState("");
   const [participantName, setParticipantName] = useState("");
+  const [participantBlockNumber, setParticipantBlockNumber] = useState(1);
   const [commonParticipantPin, setCommonParticipantPin] = useState("");
   const [message, setMessage] = useState<InlineMessage | null>(null);
   const [scoreDraft, setScoreDraft] = useState<ScoreDraft>({});
@@ -388,10 +389,11 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     event.preventDefault();
     const ok = await requestSnapshot(`/api/tournaments/${slug}/participants`, {
       method: "POST",
-      body: JSON.stringify({ adminPin, name: participantName })
+      body: JSON.stringify({ adminPin, name: participantName, blockNumber: participantBlockNumber })
     }, "admin");
     if (ok) {
       setParticipantName("");
+      setParticipantBlockNumber(1);
       showMessage("admin", "success", "参加者を追加しました。", "");
     }
   }
@@ -686,6 +688,14 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const activeParticipant = activeParticipantId ? participantById.get(activeParticipantId) : null;
   const isParticipantLoggedIn = Boolean(activeParticipantId && participantPin);
   const canUseAdminTools = isAdminMode && isAdminAuthenticated;
+
+  useEffect(() => {
+    if (!snapshot) return;
+    setParticipantBlockNumber((current) => {
+      const maxBlock = Math.max(snapshot.tournament.block_count ?? 1, 1);
+      return Math.min(Math.max(current, 1), maxBlock);
+    });
+  }, [snapshot?.tournament.block_count, snapshot]);
 
   return (
     <main className="app-shell">
@@ -987,6 +997,22 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                     トップ画像を更新
                   </button>
                 </div>
+                {snapshot.tournament.format === "league" ? (
+                  <label className="field">
+                    追加先ブロック
+                    <select
+                      className="input"
+                      value={participantBlockNumber}
+                      onChange={(event) => setParticipantBlockNumber(Number(event.target.value))}
+                    >
+                      {Array.from({ length: Math.max(snapshot.tournament.block_count ?? 1, 1) }, (_, index) => index + 1).map((blockNumber) => (
+                        <option key={blockNumber} value={blockNumber}>
+                          ブロック{blockNumber}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
                 <input className="input" value={participantName} onChange={(event) => setParticipantName(event.target.value)} placeholder="参加者名" />
                 <button className="btn-primary" disabled={isBusy || !canUseAdminTools} type="submit">
                   参加者を追加

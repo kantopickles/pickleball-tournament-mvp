@@ -70,3 +70,21 @@ export async function verifyParticipantPin(tournamentId: string, pin: string) {
   const tournament = data as Pick<Tournament, "participant_pin_hash"> | null;
   return Boolean(tournament?.participant_pin_hash) && tournament?.participant_pin_hash === hashPin(pin);
 }
+
+export async function resequenceParticipantSeeds(tournamentId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("participants")
+    .select("id,seed,created_at")
+    .eq("tournament_id", tournamentId)
+    .order("seed", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error || !data) return;
+
+  await Promise.all(
+    data.map((participant, index) =>
+      supabase.from("participants").update({ seed: index + 1 }).eq("id", participant.id).eq("tournament_id", tournamentId)
+    )
+  );
+}

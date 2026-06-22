@@ -1,4 +1,4 @@
-import { getSnapshot, jsonError, verifyAdminPin } from "@/lib/api";
+import { getSnapshot, jsonError, resequenceParticipantSeeds, verifyAdminPin } from "@/lib/api";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export async function DELETE(request: Request, { params }: { params: { slug: string; participantId: string } }) {
@@ -15,6 +15,7 @@ export async function DELETE(request: Request, { params }: { params: { slug: str
 
   if (error) return jsonError("参加者を削除できませんでした。", 500);
 
+  await resequenceParticipantSeeds(tournament.id);
   const snapshot = await getSnapshot(params.slug);
   return Response.json(snapshot);
 }
