@@ -259,6 +259,14 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   }, [snapshot?.tournament.cover_image_url, snapshot]);
 
   useEffect(() => {
+    if (!snapshot) return;
+    setParticipantBlockNumber((current) => {
+      const maxBlock = Math.max(snapshot.tournament.block_count ?? 1, 1);
+      return Math.min(Math.max(current, 1), maxBlock);
+    });
+  }, [snapshot?.tournament.block_count, snapshot]);
+
+  useEffect(() => {
     if (!originalCoverImageUrl) return;
     setCoverImageUrl(null);
   }, [originalCoverImageUrl]);
@@ -688,14 +696,6 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const activeParticipant = activeParticipantId ? participantById.get(activeParticipantId) : null;
   const isParticipantLoggedIn = Boolean(activeParticipantId && participantPin);
   const canUseAdminTools = isAdminMode && isAdminAuthenticated;
-
-  useEffect(() => {
-    if (!snapshot) return;
-    setParticipantBlockNumber((current) => {
-      const maxBlock = Math.max(snapshot.tournament.block_count ?? 1, 1);
-      return Math.min(Math.max(current, 1), maxBlock);
-    });
-  }, [snapshot?.tournament.block_count, snapshot]);
 
   return (
     <main className="app-shell">
