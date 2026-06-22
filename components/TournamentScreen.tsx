@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, startTransition, useEffect, useMemo, useState } from "react";
+import { FormEvent, PointerEvent as ReactPointerEvent, startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
 import type { Match, PublicParticipant, TournamentFormat, TournamentSnapshot } from "@/lib/types";
 
@@ -26,6 +26,8 @@ type SavedAccess = {
 export default function TournamentScreen({ slug }: { slug: string }) {
   useRevealOnScroll();
   const normalizePin = (value: string) => value.replace(/\D/g, "").slice(0, 4);
+  const defaultTournamentImage = "/tournament-default.png";
+  const coverAspect = 16 / 9;
   const [snapshot, setSnapshot] = useState<TournamentSnapshot | null>(null);
   const [accessPin, setAccessPin] = useState("");
   const [accessMode, setAccessMode] = useState<"participant" | "admin">("participant");
@@ -46,6 +48,14 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const [isBusy, setIsBusy] = useState(false);
   const [isRestoringAccess, setIsRestoringAccess] = useState(true);
   const [isConfirmingDrawReset, setIsConfirmingDrawReset] = useState(false);
+  const [originalCoverImageUrl, setOriginalCoverImageUrl] = useState<string | null>(null);
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [coverZoom, setCoverZoom] = useState(1);
+  const [coverOffsetX, setCoverOffsetX] = useState(50);
+  const [coverOffsetY, setCoverOffsetY] = useState(50);
+  const coverLibraryInputRef = useRef<HTMLInputElement | null>(null);
+  const coverCameraInputRef = useRef<HTMLInputElement | null>(null);
+  const cropDragStateRef = useRef<{ pointerId: number; startX: number; startY: number; startOffsetX: number; startOffsetY: number } | null>(null);
 
   const participantById = useMemo(() => {
     const map = new Map<string, PublicParticipant>();
@@ -242,6 +252,57 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     };
   }, [slug]);
 
+  useEffect(() => {
+    if (!snapshot) return;
+    setCoverImageUrl(snapshot.tournament.cover_image_url ?? null);
+  }, [snapshot?.tournament.cover_image_url, snapshot]);
+
+  useEffect(() => {
+    if (!originalCoverImageUrl) return;
+    setCoverImageUrl(null);
+  }, [originalCoverImageUrl]);
+
+  useEffect(() => {
+    if (!originalCoverImageUrl) {
+      if (!snapshot?.tournament.cover_image_url) {
+        setCoverImageUrl(null);
+      }
+      return;
+    }
+
+    let cancelled = false;
+    const image = new Image();
+
+    image.onload = () => {
+      if (cancelled) return;
+
+      const baseWidth = image.width / image.height > coverAspect ? image.height * coverAspect : image.width;
+      const baseHeight = image.width / image.height > coverAspect ? image.height : image.width / coverAspect;
+      const cropWidth = baseWidth / coverZoom;
+      const cropHeight = baseHeight / coverZoom;
+      const maxX = Math.max(image.width - cropWidth, 0);
+      const maxY = Math.max(image.height - cropHeight, 0);
+      const sourceX = maxX * (coverOffsetX / 100);
+      const sourceY = maxY * (coverOffsetY / 100);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 1600;
+      canvas.height = 900;
+
+      const context = canvas.getContext("2d");
+      if (!context) return;
+
+      context.drawImage(image, sourceX, sourceY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
+      setCoverImageUrl(canvas.toDataURL("image/jpeg", 0.92));
+    };
+
+    image.src = originalCoverImageUrl;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [coverAspect, coverOffsetX, coverOffsetY, coverZoom, originalCoverImageUrl, snapshot?.tournament.cover_image_url]);
+
   async function requestSnapshot(path: string, init: RequestInit, scope: InlineMessage["scope"]) {
     setIsBusy(true);
     setMessage(null);
@@ -262,6 +323,38 @@ export default function TournamentScreen({ slug }: { slug: string }) {
       setSnapshot(payload as TournamentSnapshot);
     });
     return true;
+  }
+
+  async function handleCoverImageChange(file: File | null) {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showMessage("admin", "error", "画像ファイルを選んでください。", "画像を選んでください。");
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      showMessage("admin", "error", "画像は15MB以下にしてください。", "画像サイズが大きすぎます。");
+      return;
+    }
+
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ""));
+      reader.onerror = () => reject(new Error("read-error"));
+      reader.readAsDataURL(file);
+    }).catch(() => "");
+
+    if (!dataUrl) {
+      showMessage("admin", "error", "画像をうまく読み込めませんでした。別の画像でもう一度お試しください。", "画像を読み込めませんでした。");
+      return;
+    }
+
+    setOriginalCoverImageUrl(dataUrl);
+    setCoverZoom(1);
+    setCoverOffsetX(50);
+    setCoverOffsetY(50);
+    setMessage(null);
   }
 
   async function unlockTournamentAccess(event: FormEvent<HTMLFormElement>) {
@@ -344,6 +437,17 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     if (ok) {
       setCommonParticipantPin("");
       showMessage("admin", "success", "参加者PINを更新しました。", "");
+    }
+  }
+
+  async function updateTournamentCover() {
+    const ok = await requestSnapshot(`/api/tournaments/${slug}`, {
+      method: "PATCH",
+      body: JSON.stringify({ adminPin, coverImageUrl })
+    }, "admin");
+    if (ok) {
+      setOriginalCoverImageUrl(null);
+      showMessage("admin", "success", coverImageUrl ? "大会トップ画像を更新しました。" : "大会トップ画像を標準画像に戻しました。", "");
     }
   }
 
@@ -473,6 +577,43 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     }));
   }
 
+  function handleCropDragStart(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!originalCoverImageUrl) return;
+
+    cropDragStateRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startOffsetX: coverOffsetX,
+      startOffsetY: coverOffsetY
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handleCropDragMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const dragState = cropDragStateRef.current;
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return;
+
+    const deltaX = ((event.clientX - dragState.startX) / bounds.width) * 100;
+    const deltaY = ((event.clientY - dragState.startY) / bounds.height) * 100;
+
+    setCoverOffsetX(Math.min(100, Math.max(0, dragState.startOffsetX - deltaX)));
+    setCoverOffsetY(Math.min(100, Math.max(0, dragState.startOffsetY - deltaY)));
+  }
+
+  function handleCropDragEnd(event: ReactPointerEvent<HTMLDivElement>) {
+    const dragState = cropDragStateRef.current;
+    if (dragState?.pointerId === event.pointerId) {
+      cropDragStateRef.current = null;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    }
+  }
+
   if (!snapshot) {
     return (
       <main className="app-shell">
@@ -580,6 +721,13 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               </button>
             </div>
           </div>
+          <div className="mt-5 overflow-hidden rounded-[24px] border border-[rgba(114,132,181,0.14)] bg-white shadow-[0_18px_40px_rgba(114,134,186,0.12)]">
+            <img
+              alt={`${snapshot.tournament.name}の大会画像`}
+              className="aspect-[16/9] w-full object-cover"
+              src={snapshot.tournament.cover_image_url || defaultTournamentImage}
+            />
+          </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <button
               className="btn-ghost"
@@ -589,7 +737,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               {isAdminMode ? "参加者表示に戻す" : "管理者メニュー"}
             </button>
             <a className="btn-ghost" href="/">
-              別大会を作成
+              トップに戻る
             </a>
             <a className="btn-ghost" href={`/t/${slug}/guide`}>
               参加者向け使い方
@@ -713,6 +861,130 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                     type="button"
                   >
                     参加者PINを更新
+                  </button>
+                </div>
+                <div className="sub-panel sub-panel-premium grid gap-3">
+                  <label className="field">
+                    大会トップ画像
+                    <input
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      onChange={(event) => void handleCoverImageChange(event.target.files?.[0] ?? null)}
+                      ref={coverLibraryInputRef}
+                      type="file"
+                    />
+                    <input
+                      accept="image/jpeg,image/png,image/webp"
+                      capture="environment"
+                      className="sr-only"
+                      onChange={(event) => void handleCoverImageChange(event.target.files?.[0] ?? null)}
+                      ref={coverCameraInputRef}
+                      type="file"
+                    />
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <button
+                        className="btn-ghost"
+                        onClick={() => coverLibraryInputRef.current?.click()}
+                        type="button"
+                      >
+                        フォトライブラリから選ぶ
+                      </button>
+                      <button
+                        className="btn-ghost"
+                        onClick={() => coverCameraInputRef.current?.click()}
+                        type="button"
+                      >
+                        写真を撮る
+                      </button>
+                    </div>
+                    <span className="text-sm text-[#6f7b94]">15MB以下の画像を設定できます。調整後に更新すると大会ページへ反映されます。</span>
+                  </label>
+
+                  {originalCoverImageUrl ? (
+                    <div className="grid gap-4">
+                      <div
+                        className="cover-crop-stage"
+                        onPointerCancel={handleCropDragEnd}
+                        onPointerDown={handleCropDragStart}
+                        onPointerMove={handleCropDragMove}
+                        onPointerUp={handleCropDragEnd}
+                      >
+                        <div className="cover-crop-frame">
+                          <img
+                            alt="大会画像の調整プレビュー"
+                            className="cover-crop-image"
+                            draggable={false}
+                            src={originalCoverImageUrl}
+                            style={{
+                              transform: `translate(${(50 - coverOffsetX) * 1.1}%, ${(50 - coverOffsetY) * 1.1}%) scale(${coverZoom})`
+                            }}
+                          />
+                          <div className="cover-crop-overlay" aria-hidden="true" />
+                          <div className="cover-crop-focus" aria-hidden="true" />
+                        </div>
+                      </div>
+                      <div className="crop-control-grid">
+                        <label className="crop-control">
+                          <span>拡大</span>
+                          <input
+                            className="crop-range"
+                            max={2.5}
+                            min={1}
+                            onChange={(event) => setCoverZoom(Number(event.target.value))}
+                            step={0.05}
+                            type="range"
+                            value={coverZoom}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="overflow-hidden rounded-[20px] border border-[rgba(114,132,181,0.14)] bg-white">
+                    <img
+                      alt="大会画像プレビュー"
+                      className="aspect-[16/9] w-full object-cover"
+                      src={coverImageUrl || defaultTournamentImage}
+                    />
+                  </div>
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <button
+                      className="btn-ghost"
+                      disabled={isBusy || !canUseAdminTools}
+                      onClick={() => {
+                        setOriginalCoverImageUrl(null);
+                        setCoverImageUrl(snapshot.tournament.cover_image_url || null);
+                        setCoverZoom(1);
+                        setCoverOffsetX(50);
+                        setCoverOffsetY(50);
+                      }}
+                      type="button"
+                    >
+                      調整をやり直す
+                    </button>
+                    <button
+                      className="btn-ghost btn-danger-light"
+                      disabled={isBusy || !canUseAdminTools}
+                      onClick={() => {
+                        setOriginalCoverImageUrl(null);
+                        setCoverImageUrl(null);
+                        setCoverZoom(1);
+                        setCoverOffsetX(50);
+                        setCoverOffsetY(50);
+                      }}
+                      type="button"
+                    >
+                      標準画像に戻す
+                    </button>
+                  </div>
+                  <button
+                    className="btn-primary"
+                    disabled={isBusy || !canUseAdminTools}
+                    onClick={() => void updateTournamentCover()}
+                    type="button"
+                  >
+                    トップ画像を更新
                   </button>
                 </div>
                 <input className="input" value={participantName} onChange={(event) => setParticipantName(event.target.value)} placeholder="参加者名" />

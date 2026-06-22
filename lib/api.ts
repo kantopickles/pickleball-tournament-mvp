@@ -45,6 +45,7 @@ export async function getSnapshot(slug: string) {
     format: tournament.format,
     block_count: tournament.block_count,
     match_game_count: tournament.match_game_count ?? 1,
+    cover_image_url: tournament.cover_image_url ?? null,
     created_at: tournament.created_at
   };
   const publicMatches = (matches ?? []) as Match[];
