@@ -89,6 +89,20 @@ select option {
   }
 }
 
+@keyframes hero-float-in {
+  from {
+    opacity: 0;
+    transform: translateY(36px) scale(0.975);
+    filter: blur(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
 @layer components {
   .app-shell {
     @apply min-h-screen px-4 py-4 sm:px-6 lg:px-8;
@@ -230,6 +244,7 @@ select option {
     width: 100%;
     height: auto;
     pointer-events: none;
+    animation: hero-float-in 1.9s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .hero-copy {
@@ -311,6 +326,14 @@ select option {
   }
 
   @media (max-width: 640px) {
+    .app-shell {
+      padding-bottom: 7.2rem;
+    }
+
+    .topbar {
+      display: none;
+    }
+
     .hero-panel-home {
       padding: 0;
       background: transparent;
@@ -411,6 +434,7 @@ select option {
       display: block;
       width: 100%;
       height: auto;
+      animation: hero-float-in 2.2s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
 
     .hero-image-hotspot-create {
@@ -484,6 +508,8 @@ select option {
 
   .summary-card-light {
     @apply p-5;
+    position: relative;
+    overflow: hidden;
     border-radius: 24px;
     border: 1px solid rgba(114, 132, 181, 0.14);
     background:
@@ -492,24 +518,47 @@ select option {
     box-shadow: 0 16px 40px rgba(123, 141, 191, 0.1);
   }
 
+  .summary-card-image {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(246, 249, 255, 0.9)),
+      url("/tournament-default.png");
+    background-size: cover;
+    background-position: center;
+    opacity: 0.32;
+    pointer-events: none;
+  }
+
+  .summary-card-light:nth-child(2) .summary-card-image {
+    background-position: center 36%;
+  }
+
+  .summary-card-light:nth-child(3) .summary-card-image {
+    background-position: center 68%;
+  }
+
   .summary-card-light h2 {
     margin: 0.8rem 0 0;
     font-size: 1.4rem;
     line-height: 1.2;
     letter-spacing: -0.03em;
     color: #1d2a46;
+    position: relative;
   }
 
   .summary-card-light p:last-child {
     margin: 0.7rem 0 0;
     line-height: 1.8;
     color: var(--muted-strong);
+    position: relative;
   }
 
   .summary-kicker {
     @apply text-xs font-semibold uppercase tracking-[0.22em];
     margin: 0;
     color: var(--brand);
+    position: relative;
   }
 
   .panel,
@@ -956,6 +1005,13 @@ select option {
     color: var(--muted-strong);
   }
 
+  .premium-badge-image {
+    background: rgba(255, 255, 255, 0.92);
+    color: #22304f;
+    box-shadow: 0 10px 22px rgba(24, 32, 58, 0.12);
+    backdrop-filter: blur(10px);
+  }
+
   .system-message {
     @apply px-4 py-3 text-sm;
     border-radius: 18px;
@@ -1107,6 +1163,71 @@ select option {
 
   .status-chip {
     @apply rounded-full border px-2.5 py-1 text-xs font-bold;
+  }
+
+  .mobile-floating-actions {
+    display: none;
+  }
+
+  @media (max-width: 640px) {
+    .mobile-floating-actions {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 50;
+      display: grid;
+      gap: 0.75rem;
+      padding: 0.85rem 1rem calc(0.9rem + env(safe-area-inset-bottom));
+      background:
+        linear-gradient(180deg, rgba(244, 247, 255, 0), rgba(244, 247, 255, 0.96) 24%, rgba(244, 247, 255, 1)),
+        rgba(244, 247, 255, 0.98);
+      backdrop-filter: blur(20px);
+    }
+
+    .mobile-floating-action {
+      display: inline-flex;
+      min-height: 3.8rem;
+      align-items: center;
+      justify-content: center;
+      gap: 0.8rem;
+      padding: 0 1.2rem;
+      border-radius: 22px;
+      font-weight: 700;
+      box-shadow: 0 18px 34px rgba(123, 141, 191, 0.16);
+    }
+
+    .mobile-floating-action-primary {
+      background: linear-gradient(180deg, #666cff, #5659ef);
+      color: #ffffff;
+    }
+
+    .mobile-floating-action-secondary {
+      border: 1px solid rgba(118, 135, 179, 0.14);
+      background: rgba(255, 255, 255, 0.96);
+      color: #22304f;
+    }
+
+    .mobile-floating-icon {
+      display: inline-flex;
+      width: 1.15rem;
+      height: 1.15rem;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mobile-floating-icon svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .mobile-floating-arrow {
+      flex: 0 0 auto;
+      font-size: 1.15rem;
+      line-height: 1;
+    }
   }
 }
 

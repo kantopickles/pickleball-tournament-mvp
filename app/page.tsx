@@ -105,6 +105,8 @@ export default function HomePage() {
         return "大会を作れませんでした。入力内容を確認して、もう一度お試しください。";
       case "大会画像の読み込みに失敗しました。画像を選び直してください。":
         return "画像をうまく読み込めませんでした。別の画像でもう一度お試しください。";
+      case "画像は15MB以下にしてください。":
+        return "画像サイズが大きすぎます。15MB以下の画像を選んでください。";
       case "大会を削除できませんでした。":
         return "大会を削除できませんでした。作成用PINを確認して、もう一度お試しください。";
       default:
@@ -128,9 +130,9 @@ export default function HomePage() {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
+    if (file.size > 15 * 1024 * 1024) {
       setMessage({
-        text: "画像は2MB以下にしてください。",
+        text: "画像は15MB以下にしてください。",
         tone: "error",
         scope: "create"
       });
@@ -391,6 +393,7 @@ export default function HomePage() {
         <section className="summary-grid-light" data-reveal>
           {formatSummary.map((item) => (
             <article key={item.key} className="summary-card-light">
+              <div className="summary-card-image" aria-hidden="true" />
               <p className="summary-kicker">{item.key}</p>
               <h2>{item.value}</h2>
               <p>{item.detail}</p>
@@ -428,20 +431,15 @@ export default function HomePage() {
                       />
                       <div className="tournament-card-image-overlay" />
                       <div className="tournament-card-image-badges">
-                        <span className="premium-badge premium-badge-brand">{formatLabels[tournament.format]}</span>
-                        <span className="premium-badge premium-badge-soft">{tournament.match_game_count}本勝負</span>
+                        <span className="premium-badge premium-badge-image">{formatLabels[tournament.format]}</span>
+                        {tournament.format === "league" ? (
+                          <span className="premium-badge premium-badge-image">{tournament.block_count}ブロック</span>
+                        ) : null}
+                        <span className="premium-badge premium-badge-image">{tournament.match_game_count}本勝負</span>
                       </div>
                     </div>
                   </a>
                   <div className="tournament-card-top">
-                    <div className="tournament-badges">
-                      {tournament.format === "league" ? (
-                        <span className="premium-badge premium-badge-soft">{tournament.block_count}ブロック</span>
-                      ) : null}
-                      <span className="premium-badge premium-badge-neutral">
-                        {tournament.cover_image_url ? "画像設定済み" : "標準画像"}
-                      </span>
-                    </div>
                     <h3>{tournament.name}</h3>
                   </div>
 
@@ -481,8 +479,8 @@ export default function HomePage() {
           ) : null}
         </section>
 
-        <section className="bottom-home-grid" data-reveal>
-          <div className="panel panel-home-section" id="access-guide">
+        <section className="panel panel-home-section" data-reveal id="access-guide">
+          <div>
             <p className="eyebrow">Flow</p>
             <h2 className="section-title">参加者の方は大会一覧より該当試合を開いて下さい</h2>
             <div className="flow-list">
@@ -507,36 +505,6 @@ export default function HomePage() {
                   <p>リーグ表や勝ち上がり表の未入力から、結果をその場で登録できます。</p>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div className="form-shell form-shell-home" id="create-tournament">
-            <div>
-              <p className="eyebrow">Create</p>
-              <h2 className="section-title">大会作成はポップアップで開きます</h2>
-              <p className="section-copy">
-                ボタンを押すと、この画面の上に作成フォームが開きます。
-                迷わず入力できて、作成後はそのまま大会ページへ移動します。
-              </p>
-            </div>
-            <div className="mt-6 grid gap-4">
-              <div className="flow-item">
-                <span className="flow-step">1</span>
-                <div>
-                  <h3>必要事項をまとめて入力</h3>
-                  <p>大会名、形式、PIN、画像までを1つのポップアップで入力できます。</p>
-                </div>
-              </div>
-              <div className="flow-item">
-                <span className="flow-step">2</span>
-                <div>
-                  <h3>画像もその場で調整</h3>
-                  <p>アップした画像は、そのまま位置と拡大を調整して大会カードに反映できます。</p>
-                </div>
-              </div>
-              <button className="btn-primary btn-home-primary mt-2" onClick={openCreateModal} type="button">
-                大会を作成する
-              </button>
             </div>
           </div>
         </section>
@@ -698,7 +666,7 @@ export default function HomePage() {
                       写真を撮る
                     </button>
                   </div>
-                  <span className="text-sm text-[#6f7b94]">任意設定です。未設定なら標準画像が自動で入ります。</span>
+                  <span className="text-sm text-[#6f7b94]">任意設定です。15MB以下まで選べて、表示用に自動で調整されます。</span>
                 </label>
 
                 <div className="sub-panel sub-panel-premium">
@@ -799,6 +767,33 @@ export default function HomePage() {
           </div>
         ) : null}
       </section>
+
+      <div className="mobile-floating-actions" aria-label="固定操作">
+        <button className="mobile-floating-action mobile-floating-action-primary" onClick={openCreateModal} type="button">
+          <span className="mobile-floating-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M5 7.75A2.75 2.75 0 0 1 7.75 5h5.5a1 1 0 1 1 0 2h-5.5C7.34 7 7 7.34 7 7.75v8.5c0 .41.34.75.75.75h8.5c.41 0 .75-.34.75-.75v-5.5a1 1 0 1 1 2 0v5.5A2.75 2.75 0 0 1 16.25 19h-8.5A2.75 2.75 0 0 1 5 16.25v-8.5Zm8.56-1.06a1 1 0 0 1 0-1.41l4-4a1 1 0 1 1 1.41 1.41l-4 4a1 1 0 0 1-1.41 0Zm-1.67 6.5 5.75-5.75 1.41 1.41-5.75 5.75-2.47.35.35-2.47Z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          <span>大会を作成する</span>
+          <span className="mobile-floating-arrow" aria-hidden="true">→</span>
+        </button>
+        <a className="mobile-floating-action mobile-floating-action-secondary" href="#tournament-list">
+          <span className="mobile-floating-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M6.75 4A2.75 2.75 0 0 0 4 6.75v10.5A2.75 2.75 0 0 0 6.75 20h10.5A2.75 2.75 0 0 0 20 17.25V6.75A2.75 2.75 0 0 0 17.25 4H6.75ZM6 9.25c0-.41.34-.75.75-.75h10.5c.41 0 .75.34.75.75s-.34.75-.75.75H6.75A.75.75 0 0 1 6 9.25Zm.75 3.25a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-4.5Zm0 4a.75.75 0 0 0 0 1.5h10.5a.75.75 0 0 0 0-1.5H6.75Z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          <span>既存の大会を見る</span>
+          <span className="mobile-floating-arrow" aria-hidden="true">→</span>
+        </a>
+      </div>
     </main>
   );
 }
