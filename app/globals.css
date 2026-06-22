@@ -1248,8 +1248,10 @@ select option {
       gap: 0.55rem;
       padding: 0 0.9rem;
       border-radius: 18px;
-      font-size: 0.93rem;
+      font-size: 0.82rem;
       font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
       box-shadow: 0 14px 28px rgba(123, 141, 191, 0.14);
     }
 
