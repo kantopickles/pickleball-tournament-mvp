@@ -571,30 +571,49 @@ select option {
     }
 
     .format-board-copy {
-      position: static;
-      width: 100%;
+      position: absolute;
+      inset: 0;
+      width: auto;
       padding: 0;
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 250, 255, 0.92)),
-        rgba(255, 255, 255, 0.92);
+      background: none;
       backdrop-filter: none;
+      display: block;
     }
 
     .format-board-copy-item {
-      padding: 1rem 1rem;
-      border-top: 1px solid rgba(114, 132, 181, 0.12);
-    }
-
-    .format-board-copy-item:first-child {
+      position: absolute;
+      left: 5%;
+      width: 44%;
+      padding: 0;
       border-top: 0;
     }
 
+    .format-board-copy-item:nth-child(1) {
+      top: 3.7%;
+    }
+
+    .format-board-copy-item:nth-child(2) {
+      top: 30.9%;
+    }
+
+    .format-board-copy-item:nth-child(3) {
+      top: 67.9%;
+    }
+
+    .format-board-kicker {
+      font-size: 0.78rem;
+      letter-spacing: 0.05em;
+    }
+
     .format-board-copy-item h2 {
-      font-size: 1.75rem;
+      margin-top: 0.58rem;
+      font-size: 1.58rem;
+      line-height: 1.08;
     }
 
     .format-board-copy-item p:last-child {
-      font-size: 0.92rem;
+      margin-top: 0.62rem;
+      font-size: 0.72rem;
       line-height: 1.6;
     }
   }

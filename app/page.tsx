@@ -459,11 +459,14 @@ export default function HomePage() {
         </section>
 
         <section className="format-board" data-reveal aria-label="大会形式の紹介">
-          <img
-            alt="大会形式イメージ"
-            className="format-board-image"
-            src="/format-summary-board.png"
-          />
+          <picture>
+            <source media="(max-width: 900px)" srcSet="/format-summary-board-mobile.png" />
+            <img
+              alt="大会形式イメージ"
+              className="format-board-image"
+              src="/format-summary-board.png"
+            />
+          </picture>
           <div className="format-board-copy" aria-hidden="false">
             {formatSummary.map((item) => (
               <article key={item.key} className="format-board-copy-item">
