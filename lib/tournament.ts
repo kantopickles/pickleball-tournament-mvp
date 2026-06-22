@@ -55,6 +55,7 @@ export function buildTournamentMatches(participants: PublicParticipant[]) {
 
 export function calculateStandings(participants: PublicParticipant[], matches: Match[]) {
   const table = new Map<string, Standing>();
+  const participantOrder = new Map(participants.map((participant, index) => [participant.id, index]));
 
   participants.forEach((participant) => {
     table.set(participant.id, {
@@ -107,20 +108,19 @@ export function calculateStandings(participants: PublicParticipant[], matches: M
     pointDiff: standing.pointsFor - standing.pointsAgainst
   }));
 
-  standings.sort((a, b) => {
-    if (a.blockNumber !== b.blockNumber) return a.blockNumber - b.blockNumber;
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
-    const headToHead = compareHeadToHead(a.participantId, b.participantId, matches);
-    if (headToHead !== 0) return headToHead;
-    if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
-    return a.name.localeCompare(b.name, "ja");
-  });
+  const blockNumbers = Array.from(new Set(standings.map((standing) => standing.blockNumber))).sort((a, b) => a - b);
+  const sortedStandings = blockNumbers.flatMap((blockNumber) =>
+    sortBlockStandings(
+      standings.filter((standing) => standing.blockNumber === blockNumber),
+      matches,
+      participantOrder
+    )
+  );
 
   let currentBlock = 0;
   let rank = 0;
 
-  return standings.map((standing) => {
+  return sortedStandings.map((standing) => {
     if (standing.blockNumber !== currentBlock) {
       currentBlock = standing.blockNumber;
       rank = 1;
@@ -146,6 +146,58 @@ function compareHeadToHead(leftId: string, rightId: string, matches: Match[]) {
   if (match.winner_id === leftId) return -1;
   if (match.winner_id === rightId) return 1;
   return 0;
+}
+
+function sortBlockStandings(
+  standings: Standing[],
+  matches: Match[],
+  participantOrder: Map<string, number>
+) {
+  const baseSorted = [...standings].sort((a, b) => {
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
+    return (participantOrder.get(a.participantId) ?? Number.MAX_SAFE_INTEGER) -
+      (participantOrder.get(b.participantId) ?? Number.MAX_SAFE_INTEGER);
+  });
+
+  const resolved: Standing[] = [];
+
+  for (let index = 0; index < baseSorted.length; ) {
+    const tiedGroup = [baseSorted[index]];
+    let nextIndex = index + 1;
+
+    while (
+      nextIndex < baseSorted.length &&
+      baseSorted[nextIndex].wins === baseSorted[index].wins &&
+      baseSorted[nextIndex].pointDiff === baseSorted[index].pointDiff
+    ) {
+      tiedGroup.push(baseSorted[nextIndex]);
+      nextIndex += 1;
+    }
+
+    if (tiedGroup.length === 2) {
+      const [left, right] = tiedGroup;
+      const headToHead = compareHeadToHead(left.participantId, right.participantId, matches);
+      if (headToHead < 0) {
+        resolved.push(left, right);
+      } else if (headToHead > 0) {
+        resolved.push(right, left);
+      } else {
+        resolved.push(...tiedGroup.sort((a, b) => compareParticipantOrder(a.participantId, b.participantId, participantOrder)));
+      }
+    } else {
+      resolved.push(...tiedGroup.sort((a, b) => compareParticipantOrder(a.participantId, b.participantId, participantOrder)));
+    }
+
+    index = nextIndex;
+  }
+
+  return resolved;
+}
+
+function compareParticipantOrder(leftId: string, rightId: string, participantOrder: Map<string, number>) {
+  return (participantOrder.get(leftId) ?? Number.MAX_SAFE_INTEGER) -
+    (participantOrder.get(rightId) ?? Number.MAX_SAFE_INTEGER);
 }
 
 export function winnerId(match: Pick<Match, "participant1_id" | "participant2_id" | "participant1_score" | "participant2_score" | "game_scores">) {
