@@ -583,7 +583,7 @@ select option {
     .format-board-copy-item {
       position: absolute;
       left: 4.9%;
-      width: 37.2%;
+      width: 39.8%;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
@@ -598,42 +598,42 @@ select option {
     }
 
     .format-board-copy-item:nth-child(1) {
-      top: 3.9%;
+      top: 4.2%;
       left: 4.9%;
-      width: 35.8%;
-      min-height: 14.6%;
+      width: 39.2%;
+      min-height: 13.3%;
     }
 
     .format-board-copy-item:nth-child(2) {
-      top: 35.8%;
+      top: 37.1%;
       left: 5.1%;
-      width: 43.5%;
-      min-height: 14.7%;
+      width: 40.2%;
+      min-height: 12.7%;
     }
 
     .format-board-copy-item:nth-child(3) {
-      top: 71.8%;
+      top: 73.9%;
       left: 5.1%;
-      width: 43.5%;
-      min-height: 13.8%;
+      width: 40.5%;
+      min-height: 11.8%;
     }
 
     .format-board-kicker {
-      font-size: 0.76rem;
-      letter-spacing: 0.04em;
+      font-size: 0.72rem;
+      letter-spacing: 0.035em;
     }
 
     .format-board-copy-item h2 {
-      margin-top: 0.52rem;
-      font-size: 1.58rem;
-      line-height: 1.1;
+      margin-top: 0.46rem;
+      font-size: 1.42rem;
+      line-height: 1.08;
     }
 
     .format-board-copy-item p:last-child {
-      margin-top: 0.6rem;
-      font-size: 0.8rem;
-      line-height: 1.68;
-      max-width: 92%;
+      margin-top: 0.48rem;
+      font-size: 0.66rem;
+      line-height: 1.52;
+      max-width: 100%;
     }
   }
 
