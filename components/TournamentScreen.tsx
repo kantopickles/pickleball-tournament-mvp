@@ -1370,8 +1370,11 @@ function LeagueCell({
   if (match.participant1_score === null || match.participant2_score === null) {
     return (
       <button
-        className="h-full w-full rounded-xl bg-[rgba(241,184,75,0.14)] px-2 py-2 font-bold text-[#c58a20] transition hover:bg-[rgba(241,184,75,0.2)] focus:outline-none focus:ring-2 focus:ring-[#5a5df0] disabled:cursor-not-allowed disabled:opacity-45"
-        disabled={!canSelect}
+        className={`h-full w-full rounded-xl px-2 py-2 font-bold transition focus:outline-none focus:ring-2 focus:ring-[#5a5df0] ${
+          canSelect
+            ? "bg-[rgba(241,184,75,0.14)] text-[#c58a20] hover:bg-[rgba(241,184,75,0.2)]"
+            : "bg-[rgba(243,246,255,0.96)] text-[#6f7b94] hover:bg-[rgba(236,241,252,0.98)]"
+        }`}
         onClick={() => onSelectMatch(match.id)}
         type="button"
       >
@@ -1458,9 +1461,10 @@ function BracketMatch({
           className={`mt-2 w-full rounded px-2 py-2 font-bold transition focus:outline-none focus:ring-2 ${
             hasScore
               ? "bg-[rgba(90,93,240,0.08)] text-[#5a5df0] hover:bg-[rgba(90,93,240,0.12)] focus:ring-[#5a5df0]"
-              : "bg-[rgba(241,184,75,0.14)] text-[#c58a20] hover:bg-[rgba(241,184,75,0.2)] focus:ring-[#5a5df0]"
-          } disabled:cursor-not-allowed disabled:opacity-45`}
-          disabled={!canSelect}
+              : canSelect
+                ? "bg-[rgba(241,184,75,0.14)] text-[#c58a20] hover:bg-[rgba(241,184,75,0.2)] focus:ring-[#5a5df0]"
+                : "bg-[rgba(243,246,255,0.96)] text-[#6f7b94] hover:bg-[rgba(236,241,252,0.98)] focus:ring-[#5a5df0]"
+          }`}
           onClick={() => onSelectMatch(match.id)}
           type="button"
         >
