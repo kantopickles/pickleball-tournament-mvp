@@ -506,6 +506,99 @@ select option {
     @apply grid gap-4 md:grid-cols-3;
   }
 
+  .format-board {
+    position: relative;
+    overflow: hidden;
+    border-radius: 32px;
+    box-shadow: 0 22px 54px rgba(123, 141, 191, 0.14);
+  }
+
+  .format-board-image {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .format-board-copy {
+    position: absolute;
+    left: 1.75%;
+    top: 2.8%;
+    bottom: 2.8%;
+    width: 33.4%;
+    display: grid;
+    grid-template-rows: repeat(3, 1fr);
+    padding: 1rem 0.8rem 1rem 0;
+    background:
+      linear-gradient(180deg, rgba(250, 251, 255, 0.9), rgba(250, 251, 255, 0.82)),
+      rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(6px);
+  }
+
+  .format-board-copy-item {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1rem 1.2rem;
+  }
+
+  .format-board-kicker {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: #5166f4;
+  }
+
+  .format-board-copy-item h2 {
+    margin: 1rem 0 0;
+    font-size: clamp(2rem, 3vw, 3.2rem);
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+    color: #16213d;
+  }
+
+  .format-board-copy-item p:last-child {
+    margin: 1rem 0 0;
+    font-size: clamp(1rem, 1.25vw, 1.18rem);
+    line-height: 1.75;
+    font-weight: 600;
+    color: #22304f;
+  }
+
+  @media (max-width: 900px) {
+    .format-board {
+      border-radius: 24px;
+    }
+
+    .format-board-copy {
+      position: static;
+      width: 100%;
+      padding: 0;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 250, 255, 0.92)),
+        rgba(255, 255, 255, 0.92);
+      backdrop-filter: none;
+    }
+
+    .format-board-copy-item {
+      padding: 1.2rem 1.15rem;
+      border-top: 1px solid rgba(114, 132, 181, 0.12);
+    }
+
+    .format-board-copy-item:first-child {
+      border-top: 0;
+    }
+
+    .format-board-copy-item h2 {
+      font-size: 2rem;
+    }
+
+    .format-board-copy-item p:last-child {
+      font-size: 0.98rem;
+      line-height: 1.7;
+    }
+  }
+
   .summary-card-light {
     @apply p-5;
     position: relative;

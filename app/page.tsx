@@ -458,15 +458,21 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="summary-grid-light" data-reveal>
-          {formatSummary.map((item) => (
-            <article key={item.key} className="summary-card-light">
-              <div className="summary-card-image" aria-hidden="true" />
-              <p className="summary-kicker">{item.key}</p>
-              <h2>{item.value}</h2>
-              <p>{item.detail}</p>
-            </article>
-          ))}
+        <section className="format-board" data-reveal aria-label="大会形式の紹介">
+          <img
+            alt="大会形式イメージ"
+            className="format-board-image"
+            src="/format-summary-board.png"
+          />
+          <div className="format-board-copy" aria-hidden="false">
+            {formatSummary.map((item) => (
+              <article key={item.key} className="format-board-copy-item">
+                <p className="format-board-kicker">{item.key}</p>
+                <h2>{item.value}</h2>
+                <p>{item.detail}</p>
+              </article>
+            ))}
+          </div>
         </section>
 
         <section className="panel panel-home-section" id="tournament-list" data-reveal>
