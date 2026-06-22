@@ -28,6 +28,8 @@ type InlineMessage = {
   scope: "list" | "create";
 };
 
+type CreateModalState = "closed" | "open" | "closing" | "submitting";
+
 const formatSummary = [
   {
     key: "ROUND ROBIN",
@@ -70,7 +72,11 @@ export default function HomePage() {
   const [deletePins, setDeletePins] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<InlineMessage | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createModalState, setCreateModalState] = useState<CreateModalState>("closed");
+
+  const isCreateModalVisible = createModalState !== "closed";
+  const isCreateModalClosing = createModalState === "closing";
+  const isCreateModalSubmitting = createModalState === "submitting";
 
   const formatFriendlyMessage = (text: string, fallback: string) => {
     switch (text) {
@@ -194,11 +200,11 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (!isCreateModalOpen) return;
+    if (!isCreateModalVisible) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setIsCreateModalOpen(false);
+        closeCreateModal();
       }
     };
 
@@ -210,7 +216,7 @@ export default function HomePage() {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isCreateModalOpen]);
+  }, [isCreateModalVisible]);
 
   async function loadTournaments() {
     const response = await fetch("/api/tournaments");
@@ -232,6 +238,7 @@ export default function HomePage() {
     event.preventDefault();
     setIsSaving(true);
     setMessage(null);
+    setCreateModalState("submitting");
 
     const response = await fetch("/api/tournaments", {
       method: "POST",
@@ -248,20 +255,26 @@ export default function HomePage() {
         tone: "error",
         scope: "create"
       });
+      setCreateModalState("open");
       return;
     }
 
+    setCreateModalState("closing");
+    await new Promise((resolve) => window.setTimeout(resolve, 260));
     router.push(`/t/${payload.slug}`);
   }
 
   function openCreateModal() {
     setMessage((current) => (current?.scope === "create" ? null : current));
-    setIsCreateModalOpen(true);
+    setCreateModalState("open");
   }
 
   function closeCreateModal() {
-    if (isSaving) return;
-    setIsCreateModalOpen(false);
+    if (isSaving || isCreateModalSubmitting || isCreateModalClosing || !isCreateModalVisible) return;
+    setCreateModalState("closing");
+    window.setTimeout(() => {
+      setCreateModalState("closed");
+    }, 260);
   }
 
   async function deleteTournament(slug: string) {
@@ -518,17 +531,17 @@ export default function HomePage() {
           </div>
         </section>
 
-        {isCreateModalOpen ? (
+        {isCreateModalVisible ? (
           <div
             aria-hidden={isSaving}
-            className="create-modal-backdrop"
+            className={`create-modal-backdrop ${isCreateModalClosing ? "is-closing" : ""} ${isCreateModalSubmitting ? "is-submitting" : ""}`}
             onClick={closeCreateModal}
             role="presentation"
           >
             <div
               aria-labelledby="create-tournament-modal-title"
               aria-modal="true"
-              className="create-modal-card form-shell form-shell-home"
+              className={`create-modal-card form-shell form-shell-home ${isCreateModalClosing ? "is-closing" : ""} ${isCreateModalSubmitting ? "is-submitting" : ""}`}
               onClick={(event) => event.stopPropagation()}
               role="dialog"
             >
@@ -540,7 +553,7 @@ export default function HomePage() {
                     入力が終わると、そのまま専用の大会ページへ移動します。
                   </p>
                 </div>
-                <button className="create-modal-close" onClick={closeCreateModal} type="button">
+                <button className="create-modal-close" disabled={isSaving} onClick={closeCreateModal} type="button">
                   閉じる
                 </button>
               </div>
@@ -734,11 +747,11 @@ export default function HomePage() {
                 </div>
 
                 <div className="create-modal-actions">
-                  <button className="btn-ghost" onClick={closeCreateModal} type="button">
+                  <button className="btn-ghost" disabled={isSaving} onClick={closeCreateModal} type="button">
                     キャンセル
                   </button>
                   <button className="btn-primary btn-home-primary" disabled={isSaving} type="submit">
-                    {isSaving ? "作成中..." : "大会を作成する"}
+                    {isCreateModalSubmitting ? "大会ページへ移動中..." : isSaving ? "作成中..." : "大会を作成する"}
                   </button>
                 </div>
                 {message?.scope === "create" ? (
