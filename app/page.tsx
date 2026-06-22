@@ -349,10 +349,13 @@ export default function HomePage() {
             <div className="hero-copy">
               <div className="marketing-chip">Tournament operations for real matchday</div>
               <h1 className="hero-home-title">Kanto Pickle&apos;s Draw</h1>
-              <p className="hero-home-subtitle">大会運営をもっとシンプルに</p>
+              <p className="hero-home-subtitle">
+                <span>大会運営をもっと</span>
+                <span>シンプルに</span>
+              </p>
               <p className="hero-home-lead">
-                ピックルボール大会の進行に必要な機能を、見やすく迷いにくい形でまとめています。
-                公開URL、PIN管理、結果入力、順位反映まで、この画面から始められます。
+                大会作成、PIN管理、結果入力、順位反映まで。
+                ピックルボール大会の運営を、この画面からシンプルに管理できます。
               </p>
 
               <div className="hero-cta-row">
