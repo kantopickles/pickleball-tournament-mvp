@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
 import type { TournamentFormat } from "@/lib/types";
@@ -71,12 +71,12 @@ export default function HomePage() {
   const [adminPin, setAdminPin] = useState("");
   const [participantPin, setParticipantPin] = useState("");
   const [tournaments, setTournaments] = useState<TournamentListItem[]>([]);
-  const [deletePins, setDeletePins] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<InlineMessage | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [createModalState, setCreateModalState] = useState<CreateModalState>("closed");
   const coverLibraryInputRef = useRef<HTMLInputElement | null>(null);
   const coverCameraInputRef = useRef<HTMLInputElement | null>(null);
+  const cropDragStateRef = useRef<{ pointerId: number; startX: number; startY: number; startOffsetX: number; startOffsetY: number } | null>(null);
 
   const isCreateModalVisible = createModalState !== "closed";
   const isCreateModalClosing = createModalState === "closing";
@@ -284,11 +284,14 @@ export default function HomePage() {
   }
 
   async function deleteTournament(slug: string) {
+    const creatorPin = window.prompt("削除するには作成用PINを入力してください。")?.trim() ?? "";
+    if (!creatorPin) return;
+
     setMessage(null);
     const response = await fetch(`/api/tournaments/${slug}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ creatorPin: deletePins[slug] ?? "" })
+      body: JSON.stringify({ creatorPin })
     });
     const payload = (await response.json()) as { ok?: boolean; error?: string };
 
@@ -300,18 +303,49 @@ export default function HomePage() {
       });
       return;
     }
-
-    setDeletePins((current) => {
-      const next = { ...current };
-      delete next[slug];
-      return next;
-    });
     setMessage({
       text: "大会を削除しました。",
       tone: "success",
       scope: "list"
     });
     await loadTournaments();
+  }
+
+  function handleCropDragStart(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!originalCoverImageUrl) return;
+
+    cropDragStateRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startOffsetX: coverOffsetX,
+      startOffsetY: coverOffsetY
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handleCropDragMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const dragState = cropDragStateRef.current;
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return;
+
+    const deltaX = ((event.clientX - dragState.startX) / bounds.width) * 100;
+    const deltaY = ((event.clientY - dragState.startY) / bounds.height) * 100;
+
+    setCoverOffsetX(Math.min(100, Math.max(0, dragState.startOffsetX - deltaX)));
+    setCoverOffsetY(Math.min(100, Math.max(0, dragState.startOffsetY - deltaY)));
+  }
+
+  function handleCropDragEnd(event: ReactPointerEvent<HTMLDivElement>) {
+    const dragState = cropDragStateRef.current;
+    if (dragState?.pointerId === event.pointerId) {
+      cropDragStateRef.current = null;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    }
   }
 
   return (
@@ -335,7 +369,6 @@ export default function HomePage() {
             <button className="topnav-button" onClick={openCreateModal} type="button">
               大会を作成
             </button>
-            <a href="#access-guide">使い方</a>
           </nav>
 
           <div className="topbar-actions">
@@ -407,7 +440,7 @@ export default function HomePage() {
               <p className="eyebrow">Tournaments</p>
               <h2 className="section-title">大会一覧</h2>
               <p className="section-copy">
-                直近の大会を開いたり、不要になった大会を作成用PINで削除したりできます。
+                参加者の方は大会一覧より該当試合を開いて下さい
               </p>
             </div>
           </div>
@@ -452,16 +485,8 @@ export default function HomePage() {
                   </a>
 
                   <div className="tournament-delete-row">
-                    <input
-                      className="input input-light"
-                      onChange={(event) => setDeletePins((current) => ({ ...current, [tournament.slug]: event.target.value }))}
-                      placeholder="削除時だけ作成用PINを入力"
-                      type="password"
-                      value={deletePins[tournament.slug] ?? ""}
-                    />
                     <button
                       className="btn-ghost btn-danger-light"
-                      disabled={!deletePins[tournament.slug]}
                       onClick={() => void deleteTournament(tournament.slug)}
                       type="button"
                     >
@@ -477,36 +502,6 @@ export default function HomePage() {
               {message.text}
             </p>
           ) : null}
-        </section>
-
-        <section className="panel panel-home-section" data-reveal id="access-guide">
-          <div>
-            <p className="eyebrow">Flow</p>
-            <h2 className="section-title">参加者の方は大会一覧より該当試合を開いて下さい</h2>
-            <div className="flow-list">
-              <div className="flow-item">
-                <span className="flow-step">1</span>
-                <div>
-                  <h3>大会を選ぶ</h3>
-                  <p>大会一覧から自分が参加する大会を開きます。</p>
-                </div>
-              </div>
-              <div className="flow-item">
-                <span className="flow-step">2</span>
-                <div>
-                  <h3>PINと参加者名を確認</h3>
-                  <p>参加者PINと名前選択で、自分の試合だけ入力できる状態にします。</p>
-                </div>
-              </div>
-              <div className="flow-item">
-                <span className="flow-step">3</span>
-                <div>
-                  <h3>未入力の試合を更新</h3>
-                  <p>リーグ表や勝ち上がり表の未入力から、結果をその場で登録できます。</p>
-                </div>
-              </div>
-            </div>
-          </div>
         </section>
 
         {isCreateModalVisible ? (
@@ -671,38 +666,30 @@ export default function HomePage() {
 
                 <div className="sub-panel sub-panel-premium">
                   <p className="text-sm font-semibold text-[#1d2a46]">画像プレビュー</p>
-                  <div className="mt-3 overflow-hidden rounded-[20px] border border-[rgba(114,132,181,0.14)] bg-white">
-                    <img
-                      alt="大会画像プレビュー"
-                      className="aspect-[16/9] w-full object-cover"
-                      src={coverImageUrl || defaultTournamentImage}
-                    />
-                  </div>
                   {originalCoverImageUrl ? (
                     <div className="mt-4 grid gap-4">
+                      <div
+                        className="cover-crop-stage"
+                        onPointerCancel={handleCropDragEnd}
+                        onPointerDown={handleCropDragStart}
+                        onPointerMove={handleCropDragMove}
+                        onPointerUp={handleCropDragEnd}
+                      >
+                        <div className="cover-crop-frame">
+                          <img
+                            alt="大会画像の調整プレビュー"
+                            className="cover-crop-image"
+                            draggable={false}
+                            src={originalCoverImageUrl}
+                            style={{
+                              transform: `translate(${(50 - coverOffsetX) * 1.1}%, ${(50 - coverOffsetY) * 1.1}%) scale(${coverZoom})`
+                            }}
+                          />
+                          <div className="cover-crop-overlay" aria-hidden="true" />
+                          <div className="cover-crop-focus" aria-hidden="true" />
+                        </div>
+                      </div>
                       <div className="crop-control-grid">
-                        <label className="crop-control">
-                          <span>横位置</span>
-                          <input
-                            className="crop-range"
-                            max={100}
-                            min={0}
-                            onChange={(event) => setCoverOffsetX(Number(event.target.value))}
-                            type="range"
-                            value={coverOffsetX}
-                          />
-                        </label>
-                        <label className="crop-control">
-                          <span>縦位置</span>
-                          <input
-                            className="crop-range"
-                            max={100}
-                            min={0}
-                            onChange={(event) => setCoverOffsetY(Number(event.target.value))}
-                            type="range"
-                            value={coverOffsetY}
-                          />
-                        </label>
                         <label className="crop-control">
                           <span>拡大</span>
                           <input
@@ -742,11 +729,16 @@ export default function HomePage() {
                           画像を外す
                         </button>
                       </div>
-                      <p className="text-sm text-[#6f7b94]">
-                        LINEのアイコン設定みたいに、使いたい範囲を動かして調整できます。
-                      </p>
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="mt-3 overflow-hidden rounded-[20px] border border-[rgba(114,132,181,0.14)] bg-white">
+                      <img
+                        alt="大会画像プレビュー"
+                        className="aspect-[16/9] w-full object-cover"
+                        src={coverImageUrl || defaultTournamentImage}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="create-modal-actions">
