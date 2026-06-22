@@ -54,6 +54,8 @@ export default function HomePage() {
 
   const normalizePin = (value: string) => value.replace(/\D/g, "").slice(0, 4);
   const defaultTournamentImage = "/tournament-default.png";
+  const heroDesktopImage = "/hero-desktop-exact.png?v=20260622-1037";
+  const heroMobileImage = "/hero-mobile-exact.png?v=20260622-1037";
   const coverAspect = 16 / 9;
 
   const [name, setName] = useState("");
@@ -349,7 +351,7 @@ export default function HomePage() {
             <img
               alt="Kanto Pickle's Draw hero"
               className="hero-home-desktop-image"
-              src="/hero-desktop-exact.png"
+              src={heroDesktopImage}
             />
             <button
               aria-label="大会を作成する"
@@ -369,7 +371,7 @@ export default function HomePage() {
               <img
                 alt="Kanto Pickle's Draw hero mobile"
                 className="hero-home-mobile-image"
-                src="/hero-mobile-exact.png"
+                src={heroMobileImage}
               />
               <button
                 aria-label="大会を作成する"
