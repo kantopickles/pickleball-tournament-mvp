@@ -345,63 +345,58 @@ export default function HomePage() {
         </header>
 
         <section className="hero-panel hero-panel-home" data-reveal>
-          <div className="hero-home-grid">
-            <div className="hero-copy">
-              <div className="marketing-chip">Tournament operations for real matchday</div>
-              <h1 className="hero-home-title">
-                <span>Kanto</span>
-                <span className="hero-home-title-line">
-                  <span>Pickle&apos;s </span>
-                  <span className="hero-home-title-accent">Draw</span>
-                </span>
-              </h1>
-              <p className="hero-home-subtitle">
-                <span>大会運営を</span>
-                <span className="hero-home-subtitle-accent">もっとシンプルに</span>
-              </p>
-              <div className="hero-copy-divider" />
-              <p className="hero-home-value">すべての1戦に価値を。</p>
-              <p className="hero-home-lead">
-                大会作成、PIN管理、結果入力、順位反映まで。
-                ピックルボール大会の運営を、この画面からシンプルに管理できます。
-              </p>
+          <div className="hero-home-desktop">
+            <img
+              alt="Kanto Pickle's Draw hero"
+              className="hero-home-desktop-image"
+              src="/hero-desktop-exact.png"
+            />
+            <button
+              aria-label="大会を作成する"
+              className="hero-image-hotspot hero-image-hotspot-create"
+              onClick={openCreateModal}
+              type="button"
+            />
+            <a
+              aria-label="既存の大会を見る"
+              className="hero-image-hotspot hero-image-hotspot-list"
+              href="#tournament-list"
+            />
+          </div>
 
-              <div className="hero-cta-row">
-                <button className="btn-primary btn-home-primary hero-cta-button hero-cta-button-primary" onClick={openCreateModal} type="button">
-                  <span className="hero-cta-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24">
-                      <path
-                        d="M5 7.75A2.75 2.75 0 0 1 7.75 5h5.5a1 1 0 1 1 0 2h-5.5C7.34 7 7 7.34 7 7.75v8.5c0 .41.34.75.75.75h8.5c.41 0 .75-.34.75-.75v-5.5a1 1 0 1 1 2 0v5.5A2.75 2.75 0 0 1 16.25 19h-8.5A2.75 2.75 0 0 1 5 16.25v-8.5Zm8.56-1.06a1 1 0 0 1 0-1.41l4-4a1 1 0 1 1 1.41 1.41l-4 4a1 1 0 0 1-1.41 0Zm-1.67 6.5 5.75-5.75 1.41 1.41-5.75 5.75-2.47.35.35-2.47Z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </span>
-                  <span>大会を作成する</span>
-                  <span className="hero-cta-arrow" aria-hidden="true">→</span>
-                </button>
-                <a className="btn-ghost btn-home-secondary hero-cta-button hero-cta-button-secondary" href="#tournament-list">
-                  <span className="hero-cta-icon hero-cta-icon-secondary" aria-hidden="true">
-                    <svg viewBox="0 0 24 24">
-                      <path
-                        d="M6.75 4A2.75 2.75 0 0 0 4 6.75v10.5A2.75 2.75 0 0 0 6.75 20h10.5A2.75 2.75 0 0 0 20 17.25V6.75A2.75 2.75 0 0 0 17.25 4H6.75ZM6 9.25c0-.41.34-.75.75-.75h10.5c.41 0 .75.34.75.75s-.34.75-.75.75H6.75A.75.75 0 0 1 6 9.25Zm.75 3.25a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-4.5Zm0 4a.75.75 0 0 0 0 1.5h10.5a.75.75 0 0 0 0-1.5H6.75Z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </span>
-                  <span>既存の大会を見る</span>
-                  <span className="hero-cta-arrow" aria-hidden="true">→</span>
-                </a>
+          <div className="hero-home-mobile">
+            <div className="hero-home-grid">
+              <div className="hero-copy">
+                <div className="marketing-chip">Tournament operations for real matchday</div>
+                <h1 className="hero-home-title">Kanto Pickle&apos;s Draw</h1>
+                <p className="hero-home-subtitle">
+                  <span>大会運営をもっと</span>
+                  <span>シンプルに</span>
+                </p>
+                <p className="hero-home-lead">
+                  大会作成、PIN管理、結果入力、順位反映まで。
+                  ピックルボール大会の運営を、この画面からシンプルに管理できます。
+                </p>
+
+                <div className="hero-cta-row">
+                  <button className="btn-primary btn-home-primary" onClick={openCreateModal} type="button">
+                    大会を作成する
+                  </button>
+                  <a className="btn-ghost btn-home-secondary" href="#tournament-list">
+                    既存の大会を見る
+                  </a>
+                </div>
               </div>
-            </div>
 
-            <div className="hero-visual">
-              <div className="hero-visual-card">
-                <img
-                  alt="Pickleball tournament hero"
-                  className="hero-visual-image"
-                  src="/kanto-pickles-hero.png"
-                />
-                <div className="hero-visual-overlay" />
+              <div className="hero-visual">
+                <div className="hero-visual-card">
+                  <img
+                    alt="Pickleball tournament hero"
+                    className="hero-visual-image"
+                    src="/kanto-pickles-hero.png"
+                  />
+                  <div className="hero-visual-overlay" />
+                </div>
               </div>
             </div>
           </div>
