@@ -229,6 +229,7 @@ select option {
     display: block;
     width: 100%;
     height: auto;
+    pointer-events: none;
   }
 
   .hero-copy {
@@ -302,6 +303,11 @@ select option {
     border: 0;
     background: transparent;
     cursor: pointer;
+    z-index: 3;
+    pointer-events: auto;
+    -webkit-appearance: none;
+    appearance: none;
+    touch-action: manipulation;
   }
 
   @media (max-width: 640px) {
