@@ -91,22 +91,22 @@ select option {
 
 @keyframes hero-float-in {
   from {
-    opacity: 0;
-    transform: translateY(36px) scale(0.975);
-    filter: blur(10px);
+    opacity: 0.72;
+    transform: scale(1.018);
+    filter: saturate(0.92) brightness(1.04);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
+    transform: scale(1);
+    filter: saturate(1) brightness(1);
   }
 }
 
 @keyframes hero-overlay-reveal {
   from {
-    opacity: 1;
-    backdrop-filter: blur(10px);
+    opacity: 0.42;
+    backdrop-filter: blur(3px);
   }
 
   to {
@@ -250,9 +250,9 @@ select option {
     z-index: 1;
     pointer-events: none;
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05)),
-      radial-gradient(circle at 18% 30%, rgba(255, 255, 255, 0.4), transparent 42%);
-    animation: hero-overlay-reveal 3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)),
+      radial-gradient(circle at 18% 30%, rgba(255, 255, 255, 0.28), transparent 42%);
+    animation: hero-overlay-reveal 2.4s ease-out forwards;
   }
 
   .hero-home-image {
@@ -260,6 +260,8 @@ select option {
     width: 100%;
     height: auto;
     pointer-events: none;
+    animation: hero-float-in 2.4s ease-out both;
+    will-change: transform, opacity, filter;
   }
 
   .hero-copy {
