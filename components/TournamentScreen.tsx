@@ -37,7 +37,7 @@ type SnapshotResponse =
 export default function TournamentScreen({ slug }: { slug: string }) {
   useRevealOnScroll();
   const normalizePin = (value: string) => value.replace(/\D/g, "").slice(0, 4);
-  const defaultTournamentImage = "/tournament-default.png";
+  const defaultTournamentImage = "/tournament-default.jpg";
   const coverAspect = 16 / 9;
   const [snapshot, setSnapshot] = useState<TournamentSnapshot | null>(null);
   const [accessPin, setAccessPin] = useState("");
@@ -839,6 +839,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
             <img
               alt={`${snapshot.tournament.name}の大会画像`}
               className="aspect-[16/9] w-full object-cover"
+              decoding="async"
               src={snapshot.tournament.cover_image_url || defaultTournamentImage}
             />
           </div>
@@ -1085,6 +1086,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                     <img
                       alt="大会画像プレビュー"
                       className="aspect-[16/9] w-full object-cover"
+                      decoding="async"
                       src={coverImageUrl || defaultTournamentImage}
                     />
                   </div>

@@ -103,6 +103,18 @@ select option {
   }
 }
 
+@keyframes hero-overlay-reveal {
+  from {
+    opacity: 1;
+    backdrop-filter: blur(10px);
+  }
+
+  to {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+}
+
 @layer components {
   .app-shell {
     @apply min-h-screen px-4 py-4 sm:px-6 lg:px-8;
@@ -220,15 +232,7 @@ select option {
     z-index: 1;
   }
 
-  .hero-home-desktop {
-    display: none;
-  }
-
-  .hero-home-mobile {
-    display: block;
-  }
-
-  .hero-home-mobile-exact {
+  .hero-home-frame {
     position: relative;
     display: block;
     width: 100%;
@@ -239,12 +243,23 @@ select option {
       inset 0 1px 0 rgba(255, 255, 255, 0.88);
   }
 
-  .hero-home-mobile-image {
+  .hero-home-frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05)),
+      radial-gradient(circle at 18% 30%, rgba(255, 255, 255, 0.4), transparent 42%);
+    animation: hero-overlay-reveal 3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .hero-home-image {
     display: block;
     width: 100%;
     height: auto;
     pointer-events: none;
-    animation: hero-float-in 3s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .hero-copy {
@@ -347,7 +362,7 @@ select option {
       display: none;
     }
 
-    .hero-home-mobile-exact {
+    .hero-home-frame {
       border-radius: 24px;
     }
 
@@ -415,26 +430,11 @@ select option {
       display: none;
     }
 
-    .hero-home-mobile {
-      display: none;
-    }
-
-    .hero-home-desktop {
-      position: relative;
-      display: block;
-      width: 100%;
+    .hero-home-frame {
       border-radius: 32px;
-      overflow: hidden;
       box-shadow:
         0 28px 80px rgba(114, 134, 186, 0.16),
         inset 0 1px 0 rgba(255, 255, 255, 0.88);
-    }
-
-    .hero-home-desktop-image {
-      display: block;
-      width: 100%;
-      height: auto;
-      animation: hero-float-in 3s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
 
     .hero-image-hotspot-create {
@@ -654,7 +654,7 @@ select option {
     inset: 0;
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(246, 249, 255, 0.76)),
-      url("/tournament-default.png");
+      url("/tournament-default.jpg");
     background-size: cover;
     background-position: center;
     opacity: 0.5;

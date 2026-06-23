@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, PointerEvent as ReactPointerEvent, startTransition, useEffect, useRef, useState } from "react";
+import { FormEvent, PointerEvent as ReactPointerEvent, memo, startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
 import type { TournamentFormat } from "@/lib/types";
@@ -48,14 +48,154 @@ const formatSummary = [
   }
 ];
 
+const HomeTopBar = memo(function HomeTopBar({ onOpenCreateModal }: { onOpenCreateModal: () => void }) {
+  return (
+    <header className="topbar" data-reveal>
+      <a className="brand-lockup" href="/">
+        <span className="brand-mark">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path
+              d="M7.4 18.6a1 1 0 0 1-.7-1.7l4.5-4.5-1.8-1.8a3.5 3.5 0 1 1 4.9-4.9l1.8 1.8 2.2-2.2a1 1 0 1 1 1.4 1.4l-2.2 2.2 1.1 1.1a3.5 3.5 0 0 1-4.9 4.9l-1.1-1.1-4.5 4.5a1 1 0 0 1-.7.3Zm4.8-9 3 3a1.5 1.5 0 0 0 2.1-2.1l-3-3a1.5 1.5 0 1 0-2.1 2.1Z"
+              fill="currentColor"
+            />
+          </svg>
+        </span>
+        <span>Kanto Pickle&apos;s Draw</span>
+      </a>
+
+      <nav className="topnav-links" aria-label="トップメニュー">
+        <a href="#tournament-list">大会一覧</a>
+        <button className="topnav-button" onClick={onOpenCreateModal} type="button">
+          大会を作成
+        </button>
+      </nav>
+
+      <div className="topbar-actions">
+        <a className="topbar-link" href="#tournament-list">
+          既存の大会を見る
+        </a>
+        <button className="btn-primary btn-home-primary" onClick={onOpenCreateModal} type="button">
+          大会を作成
+        </button>
+      </div>
+    </header>
+  );
+});
+
+const HomeHero = memo(function HomeHero({
+  heroDesktopImage,
+  heroMobileImage,
+  onOpenCreateModal
+}: {
+  heroDesktopImage: string;
+  heroMobileImage: string;
+  onOpenCreateModal: () => void;
+}) {
+  return (
+    <section className="hero-panel hero-panel-home" data-reveal>
+      <div className="hero-home-frame">
+        <picture>
+          <source media="(max-width: 900px)" srcSet={heroMobileImage} />
+          <img
+            alt="Kanto Pickle's Draw hero"
+            className="hero-home-image"
+            decoding="async"
+            fetchPriority="high"
+            src={heroDesktopImage}
+          />
+        </picture>
+        <button
+          aria-label="大会を作成する"
+          className="hero-image-hotspot hero-image-hotspot-create"
+          onClick={onOpenCreateModal}
+          type="button"
+        />
+        <a
+          aria-label="既存の大会を見る"
+          className="hero-image-hotspot hero-image-hotspot-list"
+          href="#tournament-list"
+        />
+        <button
+          aria-label="大会を作成する"
+          className="hero-image-hotspot hero-image-hotspot-mobile-create"
+          onClick={onOpenCreateModal}
+          type="button"
+        />
+        <a
+          aria-label="既存の大会を見る"
+          className="hero-image-hotspot hero-image-hotspot-mobile-list"
+          href="#tournament-list"
+        />
+      </div>
+    </section>
+  );
+});
+
+const FormatBoardSection = memo(function FormatBoardSection() {
+  return (
+    <section className="format-board" data-reveal aria-label="大会形式の紹介">
+      <picture>
+        <source media="(max-width: 900px)" srcSet="/format-summary-board-mobile.jpg" />
+        <img
+          alt="大会形式イメージ"
+          className="format-board-image"
+          decoding="async"
+          loading="lazy"
+          src="/format-summary-board.jpg"
+        />
+      </picture>
+      <div className="format-board-copy" aria-hidden="false">
+        {formatSummary.map((item) => (
+          <article key={item.key} className="format-board-copy-item">
+            <p className="format-board-kicker">{item.key}</p>
+            <h2>{item.value}</h2>
+            <p>{item.detail}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+});
+
+const MobileFloatingActions = memo(function MobileFloatingActions({ onOpenCreateModal }: { onOpenCreateModal: () => void }) {
+  return (
+    <div className="mobile-floating-actions" aria-label="固定操作">
+      <button className="mobile-floating-action mobile-floating-action-primary" onClick={onOpenCreateModal} type="button">
+        <span className="mobile-floating-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M5 7.75A2.75 2.75 0 0 1 7.75 5h5.5a1 1 0 1 1 0 2h-5.5C7.34 7 7 7.34 7 7.75v8.5c0 .41.34.75.75.75h8.5c.41 0 .75-.34.75-.75v-5.5a1 1 0 1 1 2 0v5.5A2.75 2.75 0 0 1 16.25 19h-8.5A2.75 2.75 0 0 1 5 16.25v-8.5Zm8.56-1.06a1 1 0 0 1 0-1.41l4-4a1 1 0 1 1 1.41 1.41l-4 4a1 1 0 0 1-1.41 0Zm-1.67 6.5 5.75-5.75 1.41 1.41-5.75 5.75-2.47.35.35-2.47Z"
+              fill="currentColor"
+            />
+          </svg>
+        </span>
+        <span>大会を作成する</span>
+        <span className="mobile-floating-arrow" aria-hidden="true">→</span>
+      </button>
+      <a className="mobile-floating-action mobile-floating-action-secondary" href="#tournament-list">
+        <span className="mobile-floating-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M6.75 4A2.75 2.75 0 0 0 4 6.75v10.5A2.75 2.75 0 0 0 6.75 20h10.5A2.75 2.75 0 0 0 20 17.25V6.75A2.75 2.75 0 0 0 17.25 4H6.75ZM6 9.25c0-.41.34-.75.75-.75h10.5c.41 0 .75.34.75.75s-.34.75-.75.75H6.75A.75.75 0 0 1 6 9.25Zm.75 3.25a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-4.5Zm0 4a.75.75 0 0 0 0 1.5h10.5a.75.75 0 0 0 0-1.5H6.75Z"
+              fill="currentColor"
+            />
+          </svg>
+        </span>
+        <span>既存の大会を見る</span>
+        <span className="mobile-floating-arrow" aria-hidden="true">→</span>
+      </a>
+    </div>
+  );
+});
+
 export default function HomePage() {
   const router = useRouter();
   useRevealOnScroll();
 
   const normalizePin = (value: string) => value.replace(/\D/g, "").slice(0, 4);
-  const defaultTournamentImage = "/tournament-default.png";
-  const heroDesktopImage = "/hero-desktop-exact.png?v=20260622-1037";
-  const heroMobileImage = "/hero-mobile-exact.png?v=20260622-1037";
+  const defaultTournamentImage = "/tournament-default.jpg";
+  const heroDesktopImage = "/hero-desktop-exact.jpg?v=20260623-0108";
+  const heroMobileImage = "/hero-mobile-exact.jpg?v=20260623-0108";
   const coverAspect = 16 / 9;
 
   const [name, setName] = useState("");
@@ -279,18 +419,18 @@ export default function HomePage() {
     router.push(`/t/${payload.slug}`);
   }
 
-  function openCreateModal() {
+  const openCreateModal = useCallback(() => {
     setMessage((current) => (current?.scope === "create" ? null : current));
     setCreateModalState("open");
-  }
+  }, []);
 
-  function closeCreateModal() {
+  const closeCreateModal = useCallback(() => {
     if (isSaving || isCreateModalSubmitting || isCreateModalClosing || !isCreateModalVisible) return;
     setCreateModalState("closing");
     window.setTimeout(() => {
       setCreateModalState("closed");
     }, 260);
-  }
+  }, [isCreateModalClosing, isCreateModalSubmitting, isCreateModalVisible, isSaving]);
 
   function openDeletePrompt(slug: string) {
     setMessage((current) => (current?.scope === "list" ? null : current));
@@ -386,97 +526,9 @@ export default function HomePage() {
   return (
     <main className="app-shell">
       <section className="page-wrap home-page">
-        <header className="topbar" data-reveal>
-          <a className="brand-lockup" href="/">
-            <span className="brand-mark">
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                <path
-                  d="M7.4 18.6a1 1 0 0 1-.7-1.7l4.5-4.5-1.8-1.8a3.5 3.5 0 1 1 4.9-4.9l1.8 1.8 2.2-2.2a1 1 0 1 1 1.4 1.4l-2.2 2.2 1.1 1.1a3.5 3.5 0 0 1-4.9 4.9l-1.1-1.1-4.5 4.5a1 1 0 0 1-.7.3Zm4.8-9 3 3a1.5 1.5 0 0 0 2.1-2.1l-3-3a1.5 1.5 0 1 0-2.1 2.1Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-            <span>Kanto Pickle&apos;s Draw</span>
-          </a>
-
-          <nav className="topnav-links" aria-label="トップメニュー">
-            <a href="#tournament-list">大会一覧</a>
-            <button className="topnav-button" onClick={openCreateModal} type="button">
-              大会を作成
-            </button>
-          </nav>
-
-          <div className="topbar-actions">
-            <a className="topbar-link" href="#tournament-list">
-              既存の大会を見る
-            </a>
-            <button className="btn-primary btn-home-primary" onClick={openCreateModal} type="button">
-              大会を作成
-            </button>
-          </div>
-        </header>
-
-        <section className="hero-panel hero-panel-home" data-reveal>
-          <div className="hero-home-desktop">
-            <img
-              alt="Kanto Pickle's Draw hero"
-              className="hero-home-desktop-image"
-              src={heroDesktopImage}
-            />
-            <button
-              aria-label="大会を作成する"
-              className="hero-image-hotspot hero-image-hotspot-create"
-              onClick={openCreateModal}
-              type="button"
-            />
-            <a
-              aria-label="既存の大会を見る"
-              className="hero-image-hotspot hero-image-hotspot-list"
-              href="#tournament-list"
-            />
-          </div>
-
-          <div className="hero-home-mobile">
-            <div className="hero-home-mobile-exact">
-              <img
-                alt="Kanto Pickle's Draw hero mobile"
-                className="hero-home-mobile-image"
-                src={heroMobileImage}
-              />
-              <button
-                aria-label="大会を作成する"
-                className="hero-image-hotspot hero-image-hotspot-mobile-create"
-                onClick={openCreateModal}
-                type="button"
-              />
-              <a
-                aria-label="既存の大会を見る"
-                className="hero-image-hotspot hero-image-hotspot-mobile-list"
-                href="#tournament-list"
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="format-board" data-reveal aria-label="大会形式の紹介">
-          <picture>
-            <source media="(max-width: 900px)" srcSet="/format-summary-board-mobile.png" />
-            <img
-              alt="大会形式イメージ"
-              className="format-board-image"
-              src="/format-summary-board.png"
-            />
-          </picture>
-          <div className="format-board-copy" aria-hidden="false">
-            {formatSummary.map((item) => (
-              <article key={item.key} className="format-board-copy-item">
-                <p className="format-board-kicker">{item.key}</p>
-                <h2>{item.value}</h2>
-                <p>{item.detail}</p>
-              </article>
-            ))}
-          </div>
-        </section>
+        <HomeTopBar onOpenCreateModal={openCreateModal} />
+        <HomeHero heroDesktopImage={heroDesktopImage} heroMobileImage={heroMobileImage} onOpenCreateModal={openCreateModal} />
+        <FormatBoardSection />
 
         <section className="panel panel-home-section" id="tournament-list" data-reveal>
           <div className="section-head-row">
@@ -504,6 +556,8 @@ export default function HomePage() {
                       <img
                         alt={`${tournament.name}の大会画像`}
                         className="tournament-card-image"
+                        decoding="async"
+                        loading="lazy"
                         src={tournament.cover_image_url || defaultTournamentImage}
                       />
                       <div className="tournament-card-image-overlay" />
@@ -836,32 +890,7 @@ export default function HomePage() {
         ) : null}
       </section>
 
-      <div className="mobile-floating-actions" aria-label="固定操作">
-        <button className="mobile-floating-action mobile-floating-action-primary" onClick={openCreateModal} type="button">
-          <span className="mobile-floating-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <path
-                d="M5 7.75A2.75 2.75 0 0 1 7.75 5h5.5a1 1 0 1 1 0 2h-5.5C7.34 7 7 7.34 7 7.75v8.5c0 .41.34.75.75.75h8.5c.41 0 .75-.34.75-.75v-5.5a1 1 0 1 1 2 0v5.5A2.75 2.75 0 0 1 16.25 19h-8.5A2.75 2.75 0 0 1 5 16.25v-8.5Zm8.56-1.06a1 1 0 0 1 0-1.41l4-4a1 1 0 1 1 1.41 1.41l-4 4a1 1 0 0 1-1.41 0Zm-1.67 6.5 5.75-5.75 1.41 1.41-5.75 5.75-2.47.35.35-2.47Z"
-                fill="currentColor"
-              />
-            </svg>
-          </span>
-          <span>大会を作成する</span>
-          <span className="mobile-floating-arrow" aria-hidden="true">→</span>
-        </button>
-        <a className="mobile-floating-action mobile-floating-action-secondary" href="#tournament-list">
-          <span className="mobile-floating-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <path
-                d="M6.75 4A2.75 2.75 0 0 0 4 6.75v10.5A2.75 2.75 0 0 0 6.75 20h10.5A2.75 2.75 0 0 0 20 17.25V6.75A2.75 2.75 0 0 0 17.25 4H6.75ZM6 9.25c0-.41.34-.75.75-.75h10.5c.41 0 .75.34.75.75s-.34.75-.75.75H6.75A.75.75 0 0 1 6 9.25Zm.75 3.25a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-4.5Zm0 4a.75.75 0 0 0 0 1.5h10.5a.75.75 0 0 0 0-1.5H6.75Z"
-                fill="currentColor"
-              />
-            </svg>
-          </span>
-          <span>既存の大会を見る</span>
-          <span className="mobile-floating-arrow" aria-hidden="true">→</span>
-        </a>
-      </div>
+      <MobileFloatingActions onOpenCreateModal={openCreateModal} />
     </main>
   );
 }
