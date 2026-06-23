@@ -978,7 +978,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 <div className="sub-panel grid gap-2">
                   {isAdminAuthenticated ? (
                     <div className="rounded-[20px] border border-[rgba(90,93,240,0.12)] bg-[rgba(90,93,240,0.06)] px-4 py-3">
-                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#5a5df0]">Participant PIN</p>
+                      <p className="text-xs font-bold tracking-[0.08em] text-[#5a5df0]">参加者PIN</p>
                       <p className="mt-2 text-2xl font-bold tracking-[0.2em] text-[#1e2a4a]">{revealedParticipantPin || "----"}</p>
                       <p className="mt-1 text-sm text-[#6f7b94]">参加者から聞かれたとき用に、管理者ログイン中だけ確認できます。</p>
                     </div>
@@ -1369,8 +1369,10 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                   <div>
                     <p className="text-sm font-semibold text-[#5a5df0]">
                       {snapshot.tournament.format === "league" && match.round >= 100
-                        ? `${playoffTitleFromRound(match.round)} R${playoffRoundNumber(match.round)} / ${match.position}`
-                        : `R${match.round} / ${match.position}`}
+                        ? `${playoffTitleFromRound(match.round)} ${matchRoundLabel(match, playoffMatches)} / ${match.position}`
+                        : snapshot.tournament.format === "tournament"
+                          ? `${matchRoundLabel(match, snapshot.matches)} / ${match.position}`
+                          : `R${match.round} / ${match.position}`}
                     </p>
                     <h3 className="mt-1 text-lg font-bold">{left} vs {right}</h3>
                   </div>
@@ -1755,10 +1757,6 @@ function playoffOffsetFromRound(round: number) {
   return Math.floor(round / 10) * 10;
 }
 
-function playoffRoundNumber(round: number) {
-  return round - playoffOffsetFromRound(round);
-}
-
 function playoffTitleFromRound(round: number) {
   return playoffTitleFromOffset(playoffOffsetFromRound(round));
 }
@@ -1777,4 +1775,10 @@ function bracketRoundLabel(roundIndex: number, totalRounds: number) {
   if (roundIndex === totalRounds - 1) return "決勝戦";
   if (roundIndex === totalRounds - 2) return "準決勝戦";
   return `${roundIndex + 1}回戦`;
+}
+
+function matchRoundLabel(match: Match, matches: Match[]) {
+  const rounds = Array.from(new Set(matches.map((item) => item.round))).sort((left, right) => left - right);
+  const roundIndex = rounds.findIndex((round) => round === match.round);
+  return bracketRoundLabel(roundIndex >= 0 ? roundIndex : 0, rounds.length);
 }
