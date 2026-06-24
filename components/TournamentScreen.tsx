@@ -991,6 +991,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
       .filter((entryId): entryId is string => Boolean(entryId))
   );
   const scheduleTable = buildScheduleTable(snapshot.scheduleEntries);
+  const scheduleCourtOptions = scheduleTable.courts;
 
   return (
     <main className="app-shell">
@@ -1708,7 +1709,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
 
                                   {canUseAdminTools ? (
                                     <div className="grid gap-2">
-                                      <input
+                                      <select
                                         className="input px-3 py-2 text-sm"
                                         onBlur={() => {
                                           if (hasScheduleDraftChanges) void saveScheduleEntry(entry.id);
@@ -1716,7 +1717,13 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                         onChange={(event) => setScheduleField(entry.id, "courtName", event.target.value)}
                                         onPointerDown={(event) => event.stopPropagation()}
                                         value={draft.courtName}
-                                      />
+                                      >
+                                        {scheduleCourtOptions.map((courtOption) => (
+                                          <option key={courtOption} value={courtOption}>
+                                            {courtOption}
+                                          </option>
+                                        ))}
+                                      </select>
                                       <div className="flex flex-wrap justify-end gap-1">
                                         <button
                                           className="btn-ghost px-2 py-2 text-xs"
@@ -1852,7 +1859,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                 <div className="grid gap-2">
                                   {canUseAdminTools ? (
                                     <>
-                                      <input
+                                      <select
                                         className="input px-3 py-2 text-sm"
                                         onBlur={() => {
                                           if (hasScheduleDraftChanges) void saveScheduleEntry(entry.id);
@@ -1860,7 +1867,13 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                         onChange={(event) => setScheduleField(entry.id, "courtName", event.target.value)}
                                         onPointerDown={(event) => event.stopPropagation()}
                                         value={draft.courtName}
-                                      />
+                                      >
+                                        {scheduleCourtOptions.map((courtOption) => (
+                                          <option key={courtOption} value={courtOption}>
+                                            {courtOption}
+                                          </option>
+                                        ))}
+                                      </select>
                                       <div className="flex flex-wrap justify-end gap-1">
                                         <button
                                           className="btn-ghost px-2 py-2 text-xs"
