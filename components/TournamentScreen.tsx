@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, PointerEvent as ReactPointerEvent, startTransition, useEffect, useMemo, useRef, useState } from "react";
-import { effectiveScheduleStatus, findNextScheduledMatchForCourt } from "@/lib/schedule";
+import { effectiveScheduleStatus } from "@/lib/schedule";
 import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
 import type { Match, PublicParticipant, TournamentFormat, TournamentSnapshot } from "@/lib/types";
 
@@ -961,7 +961,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const activeMatch = activeMatchId ? matchById.get(activeMatchId) ?? null : null;
   const scheduledMatchIds = new Set(snapshot.scheduleEntries.map((entry) => entry.match_id));
   const unscheduledMatches = snapshot.matches.filter((match) => !scheduledMatchIds.has(match.id));
-  const nextMatchesByCourt = Array.from(new Set(snapshot.scheduleEntries.map((entry) => entry.court_name)))
+  const currentMatchesByCourt = Array.from(new Set(snapshot.scheduleEntries.map((entry) => entry.court_name)))
     .sort((left, right) => left.localeCompare(right, "ja"))
     .map((courtName) => {
       const entry = snapshot.scheduleEntries.find((item) => {
@@ -974,6 +974,11 @@ export default function TournamentScreen({ slug }: { slug: string }) {
         match: entry ? matchById.get(entry.match_id) : undefined
       };
     });
+  const currentScheduleEntryIds = new Set(
+    currentMatchesByCourt
+      .map(({ entry }) => entry?.id)
+      .filter((entryId): entryId is string => Boolean(entryId))
+  );
   const scheduleTable = buildScheduleTable(snapshot.scheduleEntries);
 
   return (
@@ -1565,25 +1570,6 @@ export default function TournamentScreen({ slug }: { slug: string }) {
             ) : null}
           </div>
 
-          {nextMatchesByCourt.length > 0 ? (
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {nextMatchesByCourt.map(({ courtName, entry, match }) => (
-                <div key={courtName} className="sub-panel grid gap-1">
-                  <p className="text-xs font-bold tracking-[0.08em] text-[#5a5df0]">{courtName}</p>
-                  <p className="text-sm text-[#6f7b94]">次の試合</p>
-                  <p className="text-base font-bold text-[#1e2a4a]">
-                    {entry && match ? `${nameFor(match.participant1_id, participantById)} vs ${nameFor(match.participant2_id, participantById)}` : "まだ未設定です"}
-                  </p>
-                  {entry && match ? (
-                    <p className="text-xs text-[#6f7b94]">
-                      {scheduleMatchNumber(match, snapshot.matches, snapshot.tournament.format, participantById)}
-                    </p>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          ) : null}
-
           {canUseAdminTools && unscheduledMatches.length > 0 ? (
             <div className="mt-5 grid gap-3">
               <div>
@@ -1626,7 +1612,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 <table className="min-w-[920px] border-collapse text-sm">
                   <thead>
                     <tr>
-                      <th className="sticky left-0 z-20 w-24 border border-[rgba(114,132,181,0.18)] bg-[rgba(248,250,255,0.98)] px-3 py-3 text-left font-bold text-[#6f7b94]">
+                      <th className="sticky left-0 z-20 w-14 min-w-14 border border-[rgba(114,132,181,0.18)] bg-[rgba(248,250,255,0.98)] px-2 py-3 text-center font-bold text-[#6f7b94]">
                         試合順
                       </th>
                       {scheduleTable.courts.map((courtName) => (
@@ -1639,10 +1625,10 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                   <tbody>
                     {Array.from({ length: scheduleTable.maxRows }, (_, rowIndex) => (
                       <tr key={rowIndex}>
-                        <th className="sticky left-0 z-10 border border-[rgba(114,132,181,0.18)] bg-[rgba(255,255,255,0.98)] px-3 py-4 text-center text-base font-bold text-[#5a5df0]">
+                        <th className="sticky left-0 z-10 w-14 min-w-14 border border-[rgba(114,132,181,0.18)] bg-[rgba(255,255,255,0.98)] px-2 py-4 text-center text-base font-bold text-[#5a5df0]">
                           {rowIndex + 1}
                         </th>
-                        {scheduleTable.courts.map((courtName) => {
+                      {scheduleTable.courts.map((courtName) => {
                           const entry = scheduleTable.byCourt.get(courtName)?.[rowIndex];
                           if (!entry) {
                             return (
@@ -1656,11 +1642,9 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                           const draft = scheduleDraft[entry.id] ?? {
                             courtName: entry.court_name
                           };
-                          const nextEntry = findNextScheduledMatchForCourt(snapshot.scheduleEntries, snapshot.matches, entry.match_id, draft.courtName || entry.court_name);
-                          const nextMatch = nextEntry ? matchById.get(nextEntry.match_id) : undefined;
                           const effectiveStatus = effectiveScheduleStatus(entry, match);
                           const hasScheduleDraftChanges = draft.courtName !== entry.court_name;
-                          const matchTypeLabel = match ? scheduleMatchTypeLabel(match, snapshot.matches, snapshot.tournament.format) : "";
+                          const isCurrentMatch = currentScheduleEntryIds.has(entry.id) && effectiveStatus !== "completed";
 
                           return (
                             <td
@@ -1674,8 +1658,8 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                               className={`relative touch-none select-none border border-[rgba(114,132,181,0.14)] px-3 py-3 align-top transition ${
                                 effectiveStatus === "completed"
                                   ? "bg-[rgba(243,246,255,0.64)] text-[#6f7b94]"
-                                  : effectiveStatus === "in_progress"
-                                    ? "bg-[rgba(90,93,240,0.08)]"
+                                  : isCurrentMatch
+                                    ? "bg-[rgba(90,93,240,0.12)] shadow-[inset_0_0_0_1px_rgba(90,93,240,0.14)]"
                                     : "bg-white"
                               } ${
                                 canUseAdminTools ? "cursor-grab active:cursor-grabbing" : ""
@@ -1699,13 +1683,18 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                     <span className="rounded-full bg-[rgba(52,191,132,0.12)] px-2.5 py-1 text-xs font-bold text-[#34bf84]">
                                       完了
                                     </span>
+                                  ) : isCurrentMatch ? (
+                                    <span className="rounded-full bg-[rgba(90,93,240,0.16)] px-2.5 py-1 text-xs font-bold text-[#4f53ea]">
+                                      現在の試合
+                                    </span>
                                   ) : null}
                                 </div>
-                                <p className="text-base font-bold leading-snug text-[#1e2a4a]">
-                                  {match ? `${nameFor(match.participant1_id, participantById)} vs ${nameFor(match.participant2_id, participantById)}` : "試合が見つかりません"}
-                                </p>
                                 {match ? (
-                                  matchTypeLabel ? <p className="text-xs text-[#6f7b94]">{matchTypeLabel}</p> : null
+                                  <div className="grid gap-1 text-center text-base font-bold leading-snug text-[#1e2a4a]">
+                                    <p className="break-words">{nameFor(match.participant1_id, participantById)}</p>
+                                    <p className="text-xs font-bold tracking-[0.2em] text-[#7c86a2]">VS</p>
+                                    <p className="break-words">{nameFor(match.participant2_id, participantById)}</p>
+                                  </div>
                                 ) : (
                                   <p className="text-xs text-[#6f7b94]">元の試合情報が見つかりません</p>
                                 )}
@@ -1741,12 +1730,6 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                     </>
                                   ) : null}
                                 </div>
-
-                                {nextMatch ? (
-                                  <p className="text-xs text-[#6f7b94]">
-                                    次: <span className="font-semibold text-[#1e2a4a]">{nameFor(nextMatch.participant1_id, participantById)} vs {nameFor(nextMatch.participant2_id, participantById)}</span>
-                                  </p>
-                                ) : null}
                               </div>
                             </td>
                           );
