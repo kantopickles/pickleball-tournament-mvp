@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, PointerEvent as ReactPointerEvent, startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { effectiveScheduleStatus, findNextScheduledMatchForCourt } from "@/lib/schedule";
 import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
 import type { Match, PublicParticipant, TournamentFormat, TournamentSnapshot } from "@/lib/types";
 
@@ -15,12 +16,16 @@ type SwapDraft = Record<string, { participant1Id: string; participant2Id: string
 type InlineMessage = {
   text: string;
   tone: "error" | "success";
-  scope: "access" | "participant" | "admin" | "matches";
+  scope: "access" | "participant" | "admin" | "matches" | "schedule";
 };
 type SavedAccess = {
   mode: "participant" | "admin";
   pin: string;
   participantId?: string;
+};
+type ScheduleDropTarget = {
+  entryId: string;
+  placement: "before" | "after";
 };
 type AccessSuccess = {
   role: "participant" | "admin";
@@ -58,6 +63,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const [message, setMessage] = useState<InlineMessage | null>(null);
   const [scoreDraft, setScoreDraft] = useState<ScoreDraft>({});
   const [swapDraft, setSwapDraft] = useState<SwapDraft>({});
+  const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [playoffRankStart, setPlayoffRankStart] = useState(1);
   const [playoffRankEnd, setPlayoffRankEnd] = useState(1);
   const [isAdminMode, setIsAdminMode] = useState(false);
@@ -65,6 +71,10 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const [isBusy, setIsBusy] = useState(false);
   const [isRestoringAccess, setIsRestoringAccess] = useState(true);
   const [isConfirmingDrawReset, setIsConfirmingDrawReset] = useState(false);
+  const [newScheduleCourtName, setNewScheduleCourtName] = useState("Aコート");
+  const [scheduleDraft, setScheduleDraft] = useState<Record<string, { courtName: string }>>({});
+  const [draggingScheduleEntryId, setDraggingScheduleEntryId] = useState<string | null>(null);
+  const [scheduleDropTarget, setScheduleDropTarget] = useState<ScheduleDropTarget | null>(null);
   const [originalCoverImageUrl, setOriginalCoverImageUrl] = useState<string | null>(null);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [coverZoom, setCoverZoom] = useState(1);
@@ -73,10 +83,18 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const coverLibraryInputRef = useRef<HTMLInputElement | null>(null);
   const coverCameraInputRef = useRef<HTMLInputElement | null>(null);
   const cropDragStateRef = useRef<{ pointerId: number; startX: number; startY: number; startOffsetX: number; startOffsetY: number } | null>(null);
+  const scheduleDragTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleDragSourceRef = useRef<string | null>(null);
 
   const participantById = useMemo(() => {
     const map = new Map<string, PublicParticipant>();
     snapshot?.participants.forEach((participant) => map.set(participant.id, participant));
+    return map;
+  }, [snapshot]);
+
+  const matchById = useMemo(() => {
+    const map = new Map<string, Match>();
+    snapshot?.matches.forEach((match) => map.set(match.id, match));
     return map;
   }, [snapshot]);
 
@@ -319,6 +337,20 @@ export default function TournamentScreen({ slug }: { slug: string }) {
       setEditingParticipantBlockNumber(1);
     }
   }, [editingParticipantId, snapshot]);
+
+  useEffect(() => {
+    if (!snapshot) return;
+    setScheduleDraft(
+      Object.fromEntries(
+        snapshot.scheduleEntries.map((entry) => [
+          entry.id,
+          {
+            courtName: entry.court_name
+          }
+        ])
+      )
+    );
+  }, [snapshot?.scheduleEntries, snapshot]);
 
   useEffect(() => {
     if (!originalCoverImageUrl) return;
@@ -574,6 +606,52 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     if (ok) showMessage("admin", "success", `${title}を削除しました。`, "");
   }
 
+  async function addMatchToSchedule(matchIds: string[]) {
+    const ok = await requestSnapshot(`/api/tournaments/${slug}/schedule`, {
+      method: "POST",
+      body: JSON.stringify({
+        adminPin,
+        matchIds,
+        courtName: newScheduleCourtName
+      })
+    }, "schedule");
+    if (ok) {
+      showMessage("schedule", "success", "進行表に追加しました。", "");
+    }
+  }
+
+  async function reorderScheduleEntry(entryId: string, targetEntryId: string, placement: ScheduleDropTarget["placement"]) {
+    const ok = await requestSnapshot(`/api/tournaments/${slug}/schedule`, {
+      method: "PATCH",
+      body: JSON.stringify({ adminPin, mode: "reorder", entryId, targetEntryId, placement })
+    }, "schedule");
+    if (ok) showMessage("schedule", "success", "進行順を更新しました。", "");
+  }
+
+  async function saveScheduleEntry(entryId: string) {
+    const draft = scheduleDraft[entryId];
+    if (!draft) return;
+
+    const ok = await requestSnapshot(`/api/tournaments/${slug}/schedule`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        adminPin,
+        mode: "update",
+        entryId,
+        courtName: draft.courtName
+      })
+    }, "schedule");
+    if (ok) showMessage("schedule", "success", "進行表を更新しました。", "");
+  }
+
+  async function removeScheduleEntry(entryId: string) {
+    const ok = await requestSnapshot(`/api/tournaments/${slug}/schedule`, {
+      method: "DELETE",
+      body: JSON.stringify({ adminPin, entryId })
+    }, "schedule");
+    if (ok) showMessage("schedule", "success", "進行表から外しました。", "");
+  }
+
   async function saveResult(match: Match) {
     const draft = getScoreDraft(match);
     const ok = await requestSnapshot(`/api/tournaments/${slug}/matches/${match.id}`, {
@@ -639,13 +717,22 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     if (ok) showMessage("matches", "success", "対戦カードを更新しました。", "");
   }
 
-  function focusMatch(matchId: string) {
-    const element = document.getElementById(`match-${matchId}`);
-    element?.scrollIntoView({ behavior: "smooth", block: "center" });
-    window.setTimeout(() => {
-      const input = document.getElementById(`score-${matchId}-1`) as HTMLInputElement | null;
-      input?.focus();
-    }, 350);
+  function openMatchModal(matchId: string) {
+    const match = matchById.get(matchId);
+    if (!match) return;
+
+    setSwapDraft((current) => ({
+      ...current,
+      [matchId]: current[matchId] ?? {
+        participant1Id: match.participant1_id ?? "",
+        participant2Id: match.participant2_id ?? ""
+      }
+    }));
+    setActiveMatchId(matchId);
+  }
+
+  function closeMatchModal() {
+    setActiveMatchId(null);
   }
 
   function getScoreDraft(match: Match) {
@@ -682,6 +769,84 @@ export default function TournamentScreen({ slug }: { slug: string }) {
         [side]: value
       }
     }));
+  }
+
+  function setScheduleField(entryId: string, field: "courtName", value: string) {
+    setScheduleDraft((current) => ({
+      ...current,
+      [entryId]: {
+        courtName: value
+      } as { courtName: string }
+    }));
+  }
+
+  function clearScheduleDragTimer() {
+    if (!scheduleDragTimerRef.current) return;
+    clearTimeout(scheduleDragTimerRef.current);
+    scheduleDragTimerRef.current = null;
+  }
+
+  function isScheduleInteractiveTarget(target: EventTarget | null) {
+    return target instanceof HTMLElement && Boolean(target.closest("input, button, select, textarea, a"));
+  }
+
+  function scheduleDropPlacementFromPoint(element: HTMLElement, clientY: number): ScheduleDropTarget["placement"] {
+    const bounds = element.getBoundingClientRect();
+    return clientY < bounds.top + bounds.height / 2 ? "before" : "after";
+  }
+
+  function startScheduleDrag(entryId: string, event: ReactPointerEvent<HTMLElement>, fromHandle = false) {
+    if (!canUseAdminTools || isBusy || (!fromHandle && isScheduleInteractiveTarget(event.target))) return;
+
+    clearScheduleDragTimer();
+    scheduleDragSourceRef.current = entryId;
+    setScheduleDropTarget({ entryId, placement: "before" });
+    scheduleDragTimerRef.current = setTimeout(() => {
+      setDraggingScheduleEntryId(entryId);
+    }, fromHandle ? 140 : 260);
+  }
+
+  function enterScheduleDropTarget(entryId: string, event: ReactPointerEvent<HTMLElement>) {
+    if (!draggingScheduleEntryId) return;
+    setScheduleDropTarget({
+      entryId,
+      placement: scheduleDropPlacementFromPoint(event.currentTarget, event.clientY)
+    });
+  }
+
+  function finishScheduleDrag(event?: ReactPointerEvent<HTMLElement>) {
+    clearScheduleDragTimer();
+    const sourceEntryId = draggingScheduleEntryId;
+    const elementAtPointer =
+      event && typeof document !== "undefined"
+        ? document.elementFromPoint(event.clientX, event.clientY)
+        : null;
+    const targetElement =
+      elementAtPointer instanceof HTMLElement
+        ? elementAtPointer.closest<HTMLElement>("[data-schedule-entry-id]")
+        : null;
+    const nextDropTarget =
+      targetElement?.dataset.scheduleEntryId
+        ? {
+            entryId: targetElement.dataset.scheduleEntryId,
+            placement: event ? scheduleDropPlacementFromPoint(targetElement, event.clientY) : scheduleDropTarget?.placement ?? "before"
+          }
+        : scheduleDropTarget;
+
+    setDraggingScheduleEntryId(null);
+    setScheduleDropTarget(null);
+    scheduleDragSourceRef.current = null;
+
+    if (!sourceEntryId || !nextDropTarget) return;
+    if (sourceEntryId === nextDropTarget.entryId) return;
+    void reorderScheduleEntry(sourceEntryId, nextDropTarget.entryId, nextDropTarget.placement);
+  }
+
+  function cancelScheduleDrag() {
+    clearScheduleDragTimer();
+    setDraggingScheduleEntryId(null);
+    setScheduleDropTarget(null);
+    scheduleDragSourceRef.current = null;
   }
 
   function handleCropDragStart(event: ReactPointerEvent<HTMLDivElement>) {
@@ -793,6 +958,23 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const activeParticipant = activeParticipantId ? participantById.get(activeParticipantId) : null;
   const isParticipantLoggedIn = Boolean(activeParticipantId && participantPin);
   const canUseAdminTools = isAdminMode && isAdminAuthenticated;
+  const activeMatch = activeMatchId ? matchById.get(activeMatchId) ?? null : null;
+  const scheduledMatchIds = new Set(snapshot.scheduleEntries.map((entry) => entry.match_id));
+  const unscheduledMatches = snapshot.matches.filter((match) => !scheduledMatchIds.has(match.id));
+  const nextMatchesByCourt = Array.from(new Set(snapshot.scheduleEntries.map((entry) => entry.court_name)))
+    .sort((left, right) => left.localeCompare(right, "ja"))
+    .map((courtName) => {
+      const entry = snapshot.scheduleEntries.find((item) => {
+        if (item.court_name !== courtName) return false;
+        return effectiveScheduleStatus(item, matchById.get(item.match_id)) !== "completed";
+      });
+      return {
+        courtName,
+        entry,
+        match: entry ? matchById.get(entry.match_id) : undefined
+      };
+    });
+  const scheduleTable = buildScheduleTable(snapshot.scheduleEntries);
 
   return (
     <main className="app-shell">
@@ -851,6 +1033,9 @@ export default function TournamentScreen({ slug }: { slug: string }) {
             >
               {isAdminMode ? "参加者表示に戻す" : "管理者メニュー"}
             </button>
+            <a className="btn-ghost" href="#schedule-board">
+              進行表
+            </a>
             <a className="btn-ghost" href="/">
               トップに戻る
             </a>
@@ -1312,14 +1497,14 @@ export default function TournamentScreen({ slug }: { slug: string }) {
         </section>
 
         {snapshot.tournament.format === "tournament" ? (
-          <Bracket rounds={rounds} participantById={participantById} onSelectMatch={focusMatch} canSelectMatch={(match) => canUseAdminTools || isMatchForParticipant(match, activeParticipantId)} />
+          <Bracket rounds={rounds} participantById={participantById} onSelectMatch={openMatchModal} canSelectMatch={(match) => canUseAdminTools || isMatchForParticipant(match, activeParticipantId)} />
         ) : (
           <>
             <LeagueMatrix
               snapshot={snapshot}
               matches={leagueMatches}
               participantById={participantById}
-              onSelectMatch={focusMatch}
+              onSelectMatch={openMatchModal}
               canSelectMatch={(match) => canUseAdminTools || isMatchForParticipant(match, activeParticipantId)}
             />
             <Standings snapshot={snapshot} />
@@ -1338,7 +1523,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 <Bracket
                   rounds={group.rounds}
                   participantById={participantById}
-                  onSelectMatch={focusMatch}
+                  onSelectMatch={openMatchModal}
                   canSelectMatch={(match) => canUseAdminTools || isMatchForParticipant(match, activeParticipantId)}
                   title={group.title}
                   roundOffset={group.offset}
@@ -1348,114 +1533,387 @@ export default function TournamentScreen({ slug }: { slug: string }) {
           </>
         )}
 
-        <section className="flex flex-col gap-3" data-reveal>
-          <div>
-            <p className="eyebrow">Matches</p>
-            <h2 className="text-xl font-bold">試合</h2>
+        <section id="schedule-board" className="panel scroll-mt-4" data-reveal>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="eyebrow">Schedule</p>
+              <h2 className="text-xl font-bold">進行表</h2>
+              <p className="mt-2 text-sm leading-6 text-[#6f7b94]">
+                コートごとの試合順をここで管理します。将来の通知機能でも、この進行順をもとに次の試合を判断できる形にしています。
+              </p>
+            </div>
+            {canUseAdminTools ? (
+              <div className="grid gap-2 sm:grid-cols-[12rem_auto]">
+                <label className="field">
+                  追加先コート
+                  <input
+                    className="input"
+                    onChange={(event) => setNewScheduleCourtName(event.target.value)}
+                    placeholder="Aコート"
+                    value={newScheduleCourtName}
+                  />
+                </label>
+                <button
+                  className="btn-ghost self-end py-3 text-base"
+                  disabled={isBusy || unscheduledMatches.length === 0}
+                  onClick={() => void addMatchToSchedule(unscheduledMatches.map((match) => match.id))}
+                  type="button"
+                >
+                  未追加試合をまとめて追加
+                </button>
+              </div>
+            ) : null}
           </div>
-          {snapshot.matches.length === 0 ? <p className="panel text-sm">ドローを生成すると試合が表示されます。</p> : null}
-          {message?.scope === "matches" ? (
-            <p className={`system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>{message.text}</p>
-          ) : null}
-          {snapshot.matches.map((match) => {
-            const left = match.participant1_id ? participantById.get(match.participant1_id)?.name : "未定";
-            const right = match.participant2_id ? participantById.get(match.participant2_id)?.name : "未定";
-            const draft = getScoreDraft(match);
-            const swap = swapDraft[match.id];
-            const canSaveMatch = canUseAdminTools || (isParticipantLoggedIn && isMatchForParticipant(match, activeParticipantId));
-            return (
-              <article id={`match-${match.id}`} key={match.id} className="panel scroll-mt-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-[#5a5df0]">
-                      {snapshot.tournament.format === "league" && match.round >= 100
-                        ? `${playoffTitleFromRound(match.round)} ${matchRoundLabel(match, playoffMatches)} / ${match.position}`
-                        : snapshot.tournament.format === "tournament"
-                          ? `${matchRoundLabel(match, snapshot.matches)} / ${match.position}`
-                          : `R${match.round} / ${match.position}`}
-                    </p>
-                    <h3 className="mt-1 text-lg font-bold">{left} vs {right}</h3>
-                  </div>
-                  <span className={`status-chip ${match.locked ? "border-[rgba(52,191,132,0.24)] bg-[rgba(52,191,132,0.12)] text-[#34bf84]" : "border-[rgba(241,184,75,0.28)] bg-[rgba(241,184,75,0.14)] text-[#c58a20]"}`}>
-                    {match.locked ? "ロック済み" : "未入力"}
-                  </span>
-                </div>
 
-                <div className="mt-4 grid gap-2">
-                  {draft.map((score, gameIndex) => (
-                    <div key={gameIndex} className="grid grid-cols-[4.5rem_1fr_auto_1fr] items-center gap-2">
-                      <span className="text-sm font-bold text-[#6f7b94]">G{gameIndex + 1}</span>
-                      <input
-                        id={gameIndex === 0 ? `score-${match.id}-1` : undefined}
-                        className="input min-w-0 text-center"
-                        disabled={!canSaveMatch || (match.locked && !canUseAdminTools)}
-                        inputMode="numeric"
-                        onChange={(event) => setScore(match, gameIndex, "participant1Score", event.target.value)}
-                        placeholder="0"
-                        value={score.participant1Score}
-                      />
-                      <span className="font-bold">-</span>
-                      <input
-                        id={gameIndex === 0 ? `score-${match.id}-2` : undefined}
-                        className="input min-w-0 text-center"
-                        disabled={!canSaveMatch || (match.locked && !canUseAdminTools)}
-                        inputMode="numeric"
-                        onChange={(event) => setScore(match, gameIndex, "participant2Score", event.target.value)}
-                        placeholder="0"
-                        value={score.participant2Score}
-                      />
-                    </div>
-                  ))}
-                  {snapshot.tournament.match_game_count > 1 ? (
-                    <p className="text-xs text-[#6f7b94]">
-                      合計: {match.participant1_score ?? 0} - {match.participant2_score ?? 0}
-                    </p>
-                  ) : null}
-                </div>
-
-                {!canUseAdminTools && !canSaveMatch ? (
-                  <p className="mt-4 rounded-2xl border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.92)] px-3 py-2 text-sm text-[#6f7b94]">
-                    {isParticipantLoggedIn ? "選択した参加者が含まれる試合だけ入力できます。" : "結果入力するには、上の参加者ログインをしてください。"}
+          {nextMatchesByCourt.length > 0 ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {nextMatchesByCourt.map(({ courtName, entry, match }) => (
+                <div key={courtName} className="sub-panel grid gap-1">
+                  <p className="text-xs font-bold tracking-[0.08em] text-[#5a5df0]">{courtName}</p>
+                  <p className="text-sm text-[#6f7b94]">次の試合</p>
+                  <p className="text-base font-bold text-[#1e2a4a]">
+                    {entry && match ? `${nameFor(match.participant1_id, participantById)} vs ${nameFor(match.participant2_id, participantById)}` : "まだ未設定です"}
                   </p>
-                ) : null}
-
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <button className="btn-primary" disabled={isBusy || !canSaveMatch || (!canUseAdminTools && match.locked)} onClick={() => void saveResult(match)} type="button">
-                    結果を保存
-                  </button>
-                  {isAdminMode ? (
-                    <button className="btn-ghost py-3 text-base" disabled={isBusy || !canUseAdminTools} onClick={() => void unlockMatch(match)} type="button">
-                      ロック解除
-                    </button>
+                  {entry && match ? (
+                    <p className="text-xs text-[#6f7b94]">
+                      {scheduleMatchNumber(match, snapshot.matches, snapshot.tournament.format, participantById)}
+                    </p>
                   ) : null}
                 </div>
+              ))}
+            </div>
+          ) : null}
 
-                {isAdminMode ? (
-                  <details className="sub-panel mt-3">
-                    <summary className="cursor-pointer text-sm font-bold">対戦相手を組み替え</summary>
-                    <div className="mt-3 grid gap-2">
-                      <select className="input" value={swap?.participant1Id ?? match.participant1_id ?? ""} onChange={(event) => setSwap(match, "participant1Id", event.target.value)}>
-                        <option value="">未定</option>
-                        {snapshot.participants.map((participant) => (
-                          <option key={participant.id} value={participant.id}>{participant.name}</option>
-                        ))}
-                      </select>
-                      <select className="input" value={swap?.participant2Id ?? match.participant2_id ?? ""} onChange={(event) => setSwap(match, "participant2Id", event.target.value)}>
-                        <option value="">未定</option>
-                        {snapshot.participants.map((participant) => (
-                          <option key={participant.id} value={participant.id}>{participant.name}</option>
-                        ))}
-                      </select>
-                      <button className="btn-ghost py-3 text-base" disabled={isBusy || !canUseAdminTools} onClick={() => void swapMatch(match)} type="button">
-                        組み替えを保存
+          {canUseAdminTools && unscheduledMatches.length > 0 ? (
+            <div className="mt-5 grid gap-3">
+              <div>
+                <p className="text-sm font-bold text-[#1e2a4a]">まだ進行表に入っていない試合</p>
+                <p className="mt-1 text-sm text-[#6f7b94]">必要な試合だけ追加しても、まとめて追加しても大丈夫です。</p>
+              </div>
+              <div className="grid gap-2">
+                {unscheduledMatches.map((match) => (
+                  <div key={match.id} className="rounded-[24px] border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.92)] px-4 py-3">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[#5a5df0]">{scheduleMatchNumber(match, snapshot.matches, snapshot.tournament.format, participantById)}</p>
+                        <p className="mt-1 font-bold">{nameFor(match.participant1_id, participantById)} vs {nameFor(match.participant2_id, participantById)}</p>
+                        {scheduleMatchTypeLabel(match, snapshot.matches, snapshot.tournament.format) ? (
+                          <p className="mt-1 text-sm text-[#6f7b94]">{scheduleMatchTypeLabel(match, snapshot.matches, snapshot.tournament.format)}</p>
+                        ) : null}
+                      </div>
+                      <button
+                        className="btn-primary md:min-w-36"
+                        disabled={isBusy}
+                        onClick={() => void addMatchToSchedule([match.id])}
+                        type="button"
+                      >
+                        進行表へ追加
                       </button>
                     </div>
-                  </details>
-                ) : null}
-              </article>
-            );
-          })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="mt-5">
+            {snapshot.scheduleEntries.length === 0 ? (
+              <p className="rounded-[24px] border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.92)] px-4 py-4 text-sm text-[#6f7b94]">
+                まだ進行表は空です。管理者メニューで試合を追加すると、コートごとの進行順を作れます。
+              </p>
+            ) : (
+              <div className="overflow-x-auto rounded-[28px] border border-[rgba(114,132,181,0.16)] bg-white shadow-[0_18px_40px_rgba(114,134,186,0.08)]">
+                <table className="min-w-[920px] border-collapse text-sm">
+                  <thead>
+                    <tr>
+                      <th className="sticky left-0 z-20 w-24 border border-[rgba(114,132,181,0.18)] bg-[rgba(248,250,255,0.98)] px-3 py-3 text-left font-bold text-[#6f7b94]">
+                        試合順
+                      </th>
+                      {scheduleTable.courts.map((courtName) => (
+                        <th key={courtName} className="min-w-64 border border-[rgba(114,132,181,0.18)] bg-[rgba(248,250,255,0.98)] px-3 py-3 text-center font-bold text-[#1e2a4a]">
+                          {courtName}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: scheduleTable.maxRows }, (_, rowIndex) => (
+                      <tr key={rowIndex}>
+                        <th className="sticky left-0 z-10 border border-[rgba(114,132,181,0.18)] bg-[rgba(255,255,255,0.98)] px-3 py-4 text-center text-base font-bold text-[#5a5df0]">
+                          {rowIndex + 1}
+                        </th>
+                        {scheduleTable.courts.map((courtName) => {
+                          const entry = scheduleTable.byCourt.get(courtName)?.[rowIndex];
+                          if (!entry) {
+                            return (
+                              <td key={courtName} className="border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.42)] px-3 py-4 text-center text-[#a6afc2]">
+                                -
+                              </td>
+                            );
+                          }
+
+                          const match = matchById.get(entry.match_id);
+                          const draft = scheduleDraft[entry.id] ?? {
+                            courtName: entry.court_name
+                          };
+                          const nextEntry = findNextScheduledMatchForCourt(snapshot.scheduleEntries, snapshot.matches, entry.match_id, draft.courtName || entry.court_name);
+                          const nextMatch = nextEntry ? matchById.get(nextEntry.match_id) : undefined;
+                          const effectiveStatus = effectiveScheduleStatus(entry, match);
+                          const hasScheduleDraftChanges = draft.courtName !== entry.court_name;
+                          const matchTypeLabel = match ? scheduleMatchTypeLabel(match, snapshot.matches, snapshot.tournament.format) : "";
+
+                          return (
+                            <td
+                              key={entry.id}
+                              data-schedule-entry-id={entry.id}
+                              onPointerCancel={cancelScheduleDrag}
+                              onPointerDown={(event) => startScheduleDrag(entry.id, event)}
+                              onPointerEnter={(event) => enterScheduleDropTarget(entry.id, event)}
+                              onPointerMove={(event) => enterScheduleDropTarget(entry.id, event)}
+                              onPointerUp={(event) => finishScheduleDrag(event)}
+                              className={`relative touch-none select-none border border-[rgba(114,132,181,0.14)] px-3 py-3 align-top transition ${
+                                effectiveStatus === "completed"
+                                  ? "bg-[rgba(243,246,255,0.64)] text-[#6f7b94]"
+                                  : effectiveStatus === "in_progress"
+                                    ? "bg-[rgba(90,93,240,0.08)]"
+                                    : "bg-white"
+                              } ${
+                                canUseAdminTools ? "cursor-grab active:cursor-grabbing" : ""
+                              } ${
+                                draggingScheduleEntryId === entry.id ? "scale-[0.98] opacity-55" : ""
+                              }`}
+                            >
+                              {draggingScheduleEntryId && scheduleDropTarget?.entryId === entry.id && draggingScheduleEntryId !== entry.id ? (
+                                <span
+                                  className={`pointer-events-none absolute left-2 right-2 z-20 h-1 rounded-full bg-[#5a5df0] shadow-[0_0_0_4px_rgba(90,93,240,0.14)] ${
+                                    scheduleDropTarget.placement === "before" ? "top-0 -translate-y-1/2" : "bottom-0 translate-y-1/2"
+                                  }`}
+                                />
+                              ) : null}
+                              <div className="grid gap-2">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <span className="rounded-full bg-[rgba(90,93,240,0.1)] px-2.5 py-1 text-xs font-bold text-[#5a5df0]">
+                                    {match ? scheduleMatchNumber(match, snapshot.matches, snapshot.tournament.format, participantById) : "試合未設定"}
+                                  </span>
+                                  {effectiveStatus === "completed" ? (
+                                    <span className="rounded-full bg-[rgba(52,191,132,0.12)] px-2.5 py-1 text-xs font-bold text-[#34bf84]">
+                                      完了
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <p className="text-base font-bold leading-snug text-[#1e2a4a]">
+                                  {match ? `${nameFor(match.participant1_id, participantById)} vs ${nameFor(match.participant2_id, participantById)}` : "試合が見つかりません"}
+                                </p>
+                                {match ? (
+                                  matchTypeLabel ? <p className="text-xs text-[#6f7b94]">{matchTypeLabel}</p> : null
+                                ) : (
+                                  <p className="text-xs text-[#6f7b94]">元の試合情報が見つかりません</p>
+                                )}
+
+                                <div className="grid gap-2">
+                                  {canUseAdminTools ? (
+                                    <>
+                                      <input
+                                        className="input px-3 py-2 text-sm"
+                                        onBlur={() => {
+                                          if (hasScheduleDraftChanges) void saveScheduleEntry(entry.id);
+                                        }}
+                                        onChange={(event) => setScheduleField(entry.id, "courtName", event.target.value)}
+                                        onPointerDown={(event) => event.stopPropagation()}
+                                        value={draft.courtName}
+                                      />
+                                      <div className="flex flex-wrap justify-end gap-1">
+                                        <button
+                                          className="btn-ghost px-2 py-2 text-xs"
+                                          disabled={isBusy}
+                                          onPointerDown={(event) => {
+                                            event.stopPropagation();
+                                            startScheduleDrag(entry.id, event, true);
+                                          }}
+                                          type="button"
+                                        >
+                                          掴んで移動
+                                        </button>
+                                        <button className="btn-danger-ghost px-2 py-2 text-xs" disabled={isBusy} onClick={() => void removeScheduleEntry(entry.id)} type="button">
+                                          外す
+                                        </button>
+                                      </div>
+                                    </>
+                                  ) : null}
+                                </div>
+
+                                {nextMatch ? (
+                                  <p className="text-xs text-[#6f7b94]">
+                                    次: <span className="font-semibold text-[#1e2a4a]">{nameFor(nextMatch.participant1_id, participantById)} vs {nameFor(nextMatch.participant2_id, participantById)}</span>
+                                  </p>
+                                ) : null}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {message?.scope === "schedule" ? (
+            <p className={`mt-4 system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>{message.text}</p>
+          ) : null}
         </section>
+
+        {activeMatch
+          ? (() => {
+              const match = activeMatch;
+              const left = nameFor(match.participant1_id, participantById);
+              const right = nameFor(match.participant2_id, participantById);
+              const draft = getScoreDraft(match);
+              const swap = swapDraft[match.id] ?? {
+                participant1Id: match.participant1_id ?? "",
+                participant2Id: match.participant2_id ?? ""
+              };
+              const canSaveMatch = canUseAdminTools || (isParticipantLoggedIn && isMatchForParticipant(match, activeParticipantId));
+              const canSwapMatch =
+                canUseAdminTools &&
+                (snapshot.tournament.format === "tournament" || (snapshot.tournament.format === "league" && match.round >= 100));
+              const matchLabel =
+                snapshot.tournament.format === "league" && match.round >= 100
+                  ? `${playoffTitleFromRound(match.round)} ${matchRoundLabel(match, playoffMatches)} / ${match.position}`
+                  : snapshot.tournament.format === "tournament"
+                    ? `${matchRoundLabel(match, snapshot.matches)} / ${match.position}`
+                    : `R${match.round} / ${match.position}`;
+
+              return (
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(14,22,46,0.38)] px-4 py-5 backdrop-blur-md sm:px-6 sm:py-8">
+                  <div className="mx-auto grid min-h-full max-w-4xl place-items-center">
+                    <section className="w-full animate-[modal-rise-in_0.38s_ease-out] rounded-[32px] border border-[rgba(255,255,255,0.74)] bg-[rgba(255,255,255,0.96)] p-4 shadow-[0_32px_90px_rgba(40,56,105,0.28)] sm:p-6">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="eyebrow">Score input</p>
+                          <p className="mt-2 text-sm font-semibold text-[#5a5df0]">{matchLabel}</p>
+                          <h2 className="mt-1 text-2xl font-bold leading-tight text-[#1e2a4a]">
+                            {left} <span className="text-[#8b94aa]">vs</span> {right}
+                          </h2>
+                        </div>
+                        <button className="btn-ghost shrink-0 px-4 py-2 text-sm" onClick={closeMatchModal} type="button">
+                          閉じる
+                        </button>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <span className={`status-chip ${match.locked ? "border-[rgba(52,191,132,0.24)] bg-[rgba(52,191,132,0.12)] text-[#34bf84]" : "border-[rgba(241,184,75,0.28)] bg-[rgba(241,184,75,0.14)] text-[#c58a20]"}`}>
+                          {match.locked ? "ロック済み" : "未入力"}
+                        </span>
+                        {canUseAdminTools ? <span className="status-chip border-[rgba(90,93,240,0.18)] bg-[rgba(90,93,240,0.08)] text-[#5a5df0]">管理者操作中</span> : null}
+                        {isParticipantLoggedIn && activeParticipant ? <span className="status-chip border-[rgba(114,132,181,0.16)] bg-[rgba(248,250,255,0.96)] text-[#6f7b94]">{activeParticipant.name}で入力中</span> : null}
+                      </div>
+
+                      <div className="mt-5 grid gap-3 rounded-[28px] border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.78)] p-3 sm:p-4">
+                        {draft.map((score, gameIndex) => (
+                          <div key={gameIndex} className="grid grid-cols-[3.5rem_1fr_auto_1fr] items-center gap-2 sm:grid-cols-[5rem_1fr_auto_1fr]">
+                            <span className="text-sm font-bold text-[#6f7b94]">G{gameIndex + 1}</span>
+                            <input
+                              className="input min-w-0 text-center text-lg font-bold"
+                              disabled={!canSaveMatch || (match.locked && !canUseAdminTools)}
+                              inputMode="numeric"
+                              onChange={(event) => setScore(match, gameIndex, "participant1Score", event.target.value)}
+                              placeholder="0"
+                              value={score.participant1Score}
+                            />
+                            <span className="font-bold text-[#6f7b94]">-</span>
+                            <input
+                              className="input min-w-0 text-center text-lg font-bold"
+                              disabled={!canSaveMatch || (match.locked && !canUseAdminTools)}
+                              inputMode="numeric"
+                              onChange={(event) => setScore(match, gameIndex, "participant2Score", event.target.value)}
+                              placeholder="0"
+                              value={score.participant2Score}
+                            />
+                          </div>
+                        ))}
+                        {snapshot.tournament.match_game_count > 1 ? (
+                          <p className="text-xs text-[#6f7b94]">
+                            現在の合計: {match.participant1_score ?? 0} - {match.participant2_score ?? 0}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      {!canUseAdminTools && !canSaveMatch ? (
+                        <p className="mt-4 rounded-2xl border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.92)] px-3 py-2 text-sm text-[#6f7b94]">
+                          {isParticipantLoggedIn ? "ログイン中の参加者が含まれる試合だけ入力できます。" : "結果入力するには、先に参加者ログインをしてください。"}
+                        </p>
+                      ) : null}
+
+                      {message?.scope === "matches" ? (
+                        <p className={`mt-4 system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>{message.text}</p>
+                      ) : null}
+
+                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                        <button className="btn-primary" disabled={isBusy || !canSaveMatch || (!canUseAdminTools && match.locked)} onClick={() => void saveResult(match)} type="button">
+                          {isBusy ? "保存中..." : "結果を保存"}
+                        </button>
+                        {isAdminMode ? (
+                          <button className="btn-ghost py-3 text-base" disabled={isBusy || !canUseAdminTools} onClick={() => void unlockMatch(match)} type="button">
+                            ロック解除
+                          </button>
+                        ) : null}
+                      </div>
+
+                      {canSwapMatch ? (
+                        <div className="sub-panel mt-5 grid gap-3">
+                          <div>
+                            <p className="text-sm font-bold text-[#1e2a4a]">対戦相手を組み替え</p>
+                            <p className="mt-1 text-xs text-[#6f7b94]">左右の枠を選び直して保存します。中央のボタンで左右を入れ替えできます。</p>
+                          </div>
+                          <div className="grid items-end gap-2 sm:grid-cols-[1fr_auto_1fr]">
+                            <label className="field">
+                              左側
+                              <select className="input" value={swap.participant1Id} onChange={(event) => setSwap(match, "participant1Id", event.target.value)}>
+                                <option value="">未定</option>
+                                {snapshot.participants.map((participant) => (
+                                  <option key={participant.id} value={participant.id}>{participant.name}</option>
+                                ))}
+                              </select>
+                            </label>
+                            <button
+                              className="btn-ghost px-4 py-3"
+                              disabled={isBusy || !canUseAdminTools}
+                              onClick={() => {
+                                setSwapDraft((current) => ({
+                                  ...current,
+                                  [match.id]: {
+                                    participant1Id: swap.participant2Id,
+                                    participant2Id: swap.participant1Id
+                                  }
+                                }));
+                              }}
+                              type="button"
+                            >
+                              入れ替え
+                            </button>
+                            <label className="field">
+                              右側
+                              <select className="input" value={swap.participant2Id} onChange={(event) => setSwap(match, "participant2Id", event.target.value)}>
+                                <option value="">未定</option>
+                                {snapshot.participants.map((participant) => (
+                                  <option key={participant.id} value={participant.id}>{participant.name}</option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
+                          <button className="btn-ghost py-3 text-base" disabled={isBusy || !canUseAdminTools} onClick={() => void swapMatch(match)} type="button">
+                            組み替えを保存
+                          </button>
+                        </div>
+                      ) : null}
+                    </section>
+                  </div>
+                </div>
+              );
+            })()
+          : null}
       </div>
     </main>
   );
@@ -1781,4 +2239,58 @@ function matchRoundLabel(match: Match, matches: Match[]) {
   const rounds = Array.from(new Set(matches.map((item) => item.round))).sort((left, right) => left - right);
   const roundIndex = rounds.findIndex((round) => round === match.round);
   return bracketRoundLabel(roundIndex >= 0 ? roundIndex : 0, rounds.length);
+}
+
+function buildScheduleTable(entries: TournamentSnapshot["scheduleEntries"]) {
+  const courts = Array.from(new Set(entries.map((entry) => entry.court_name))).sort((left, right) => left.localeCompare(right, "ja"));
+  const byCourt = new Map<string, TournamentSnapshot["scheduleEntries"]>();
+
+  courts.forEach((courtName) => {
+    byCourt.set(
+      courtName,
+      entries
+        .filter((entry) => entry.court_name === courtName)
+        .sort((left, right) => left.sequence - right.sequence)
+    );
+  });
+
+  const maxRows = Math.max(0, ...Array.from(byCourt.values()).map((courtEntries) => courtEntries.length));
+  return { courts, byCourt, maxRows };
+}
+
+function scheduleBlockLabel(match: Match, participantById: Map<string, PublicParticipant>) {
+  const blockNumber =
+    participantById.get(match.participant1_id ?? "")?.block_number ??
+    participantById.get(match.participant2_id ?? "")?.block_number;
+  return blockNumber ? `ブロック${blockNumber}` : "リーグ戦";
+}
+
+function scheduleMatchTypeLabel(
+  match: Match,
+  matches: Match[],
+  format: TournamentFormat
+) {
+  if (format === "round_robin") return "";
+
+  if (format === "league" && match.round >= 100) {
+    const playoffMatches = matches.filter((item) => item.round >= 100);
+    return matchRoundLabel(match, playoffMatches);
+  }
+
+  if (format === "league") return "リーグ戦";
+  return formatLabels[format];
+}
+
+function scheduleMatchNumber(match: Match, matches: Match[], format: TournamentFormat, participantById: Map<string, PublicParticipant>) {
+  if (format === "round_robin") return "総当たり";
+
+  if (format === "league" && match.round >= 100) {
+    return playoffTitleFromRound(match.round);
+  }
+
+  if (format === "league") return scheduleBlockLabel(match, participantById);
+
+  if (format === "tournament") return matchRoundLabel(match, matches);
+
+  return formatLabels[format];
 }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { hashPin } from "@/lib/pins";
 import { calculateStandings } from "@/lib/tournament";
-import type { Match, Participant, PublicParticipant, Tournament } from "@/lib/types";
+import type { Match, Participant, PublicParticipant, PublicScheduleEntry, Tournament } from "@/lib/types";
 
 export function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -27,14 +27,19 @@ export async function getSnapshot(slug: string) {
   const tournament = await getTournamentBySlug(slug);
   if (!tournament) return null;
 
-  const [{ data: participants }, { data: matches }] = await Promise.all([
+  const [{ data: participants }, { data: matches }, scheduleResult] = await Promise.all([
     supabase.from("participants").select("*").eq("tournament_id", tournament.id).order("seed", { ascending: true }),
     supabase
       .from("matches")
       .select("*")
       .eq("tournament_id", tournament.id)
       .order("round", { ascending: true })
-      .order("position", { ascending: true })
+      .order("position", { ascending: true }),
+    supabase
+      .from("schedule_entries")
+      .select("*")
+      .eq("tournament_id", tournament.id)
+      .order("sequence", { ascending: true })
   ]);
 
   const publicParticipants = ((participants ?? []) as Participant[]).map(({ pin_hash: _pinHash, ...participant }) => participant);
@@ -49,12 +54,17 @@ export async function getSnapshot(slug: string) {
     created_at: tournament.created_at
   };
   const publicMatches = (matches ?? []) as Match[];
+  const publicScheduleEntries =
+    scheduleResult.error && scheduleResult.error.message.includes("schedule_entries")
+      ? []
+      : ((scheduleResult.data ?? []) as PublicScheduleEntry[]);
   const rankingMatches = tournament.format === "league" ? publicMatches.filter((match) => match.round < 100) : publicMatches;
 
   return {
     tournament: publicTournament,
     participants: publicParticipants as PublicParticipant[],
     matches: publicMatches,
+    scheduleEntries: publicScheduleEntries,
     standings: tournament.format === "tournament" ? [] : calculateStandings(publicParticipants, rankingMatches)
   };
 }

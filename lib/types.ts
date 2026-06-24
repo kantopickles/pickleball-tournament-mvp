@@ -50,6 +50,22 @@ export type GameScore = {
   participant2Score: number;
 };
 
+export type ScheduleStatus = "pending" | "in_progress" | "completed";
+
+export type ScheduleEntry = {
+  id: string;
+  tournament_id: string;
+  match_id: string;
+  sequence: number;
+  court_name: string;
+  status: ScheduleStatus;
+  memo: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PublicScheduleEntry = ScheduleEntry;
+
 export type Standing = {
   participantId: string;
   name: string;
@@ -67,5 +83,6 @@ export type TournamentSnapshot = {
   tournament: PublicTournament;
   participants: PublicParticipant[];
   matches: PublicMatch[];
+  scheduleEntries: PublicScheduleEntry[];
   standings: Standing[];
 };

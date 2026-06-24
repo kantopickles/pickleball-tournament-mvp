@@ -31,6 +31,11 @@ export async function PATCH(request: Request, { params }: { params: { slug: stri
       .from("matches")
       .update({ locked: false, participant1_score: null, participant2_score: null, game_scores: null, winner_id: null })
       .eq("id", match.id);
+    await supabase
+      .from("schedule_entries")
+      .update({ status: "pending", updated_at: new Date().toISOString() })
+      .eq("tournament_id", tournament.id)
+      .eq("match_id", match.id);
     const snapshot = await getSnapshot(params.slug);
     return Response.json(snapshot);
   }
@@ -49,6 +54,11 @@ export async function PATCH(request: Request, { params }: { params: { slug: stri
         locked: false
       })
       .eq("id", match.id);
+    await supabase
+      .from("schedule_entries")
+      .update({ status: "pending", updated_at: new Date().toISOString() })
+      .eq("tournament_id", tournament.id)
+      .eq("match_id", match.id);
     const snapshot = await getSnapshot(params.slug);
     return Response.json(snapshot);
   }
@@ -114,6 +124,12 @@ export async function PATCH(request: Request, { params }: { params: { slug: stri
       updated_at: new Date().toISOString()
     })
     .eq("id", match.id);
+
+  await supabase
+    .from("schedule_entries")
+    .update({ status: "completed", updated_at: new Date().toISOString() })
+    .eq("tournament_id", tournament.id)
+    .eq("match_id", match.id);
 
   if ((tournament.format === "tournament" || (tournament.format === "league" && match.round >= 100)) && nextWinner) {
     const next = nextTournamentSlot(match.round, match.position);
