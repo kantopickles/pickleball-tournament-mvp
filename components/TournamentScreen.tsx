@@ -1608,7 +1608,126 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 まだ進行表は空です。管理者メニューで試合を追加すると、コートごとの進行順を作れます。
               </p>
             ) : (
-              <div className="overflow-x-auto rounded-[28px] border border-[rgba(114,132,181,0.16)] bg-white shadow-[0_18px_40px_rgba(114,134,186,0.08)]">
+              <>
+                <div className="grid gap-4 md:hidden">
+                  {scheduleTable.courts.map((courtName) => {
+                    const courtEntries = scheduleTable.byCourt.get(courtName) ?? [];
+
+                    return (
+                      <section
+                        key={courtName}
+                        className="overflow-hidden rounded-[28px] border border-[rgba(114,132,181,0.16)] bg-white shadow-[0_18px_40px_rgba(114,134,186,0.08)]"
+                      >
+                        <div className="border-b border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.96)] px-4 py-4 text-center text-base font-bold text-[#1e2a4a]">
+                          {courtName}
+                        </div>
+                        <div className="grid gap-0">
+                          {courtEntries.map((entry, rowIndex) => {
+                            const match = matchById.get(entry.match_id);
+                            const draft = scheduleDraft[entry.id] ?? {
+                              courtName: entry.court_name
+                            };
+                            const effectiveStatus = effectiveScheduleStatus(entry, match);
+                            const hasScheduleDraftChanges = draft.courtName !== entry.court_name;
+                            const isCurrentMatch = currentScheduleEntryIds.has(entry.id) && effectiveStatus !== "completed";
+
+                            return (
+                              <article
+                                key={entry.id}
+                                data-schedule-entry-id={entry.id}
+                                onPointerCancel={cancelScheduleDrag}
+                                onPointerDown={(event) => startScheduleDrag(entry.id, event)}
+                                onPointerEnter={(event) => enterScheduleDropTarget(entry.id, event)}
+                                onPointerMove={(event) => enterScheduleDropTarget(entry.id, event)}
+                                onPointerUp={(event) => finishScheduleDrag(event)}
+                                className={`relative touch-none select-none border-t border-[rgba(114,132,181,0.12)] px-4 py-4 transition ${
+                                  effectiveStatus === "completed"
+                                    ? "bg-[rgba(243,246,255,0.68)] text-[#6f7b94]"
+                                    : isCurrentMatch
+                                      ? "bg-[linear-gradient(135deg,rgba(247,245,255,0.98),rgba(241,246,255,0.98))] shadow-[inset_0_0_0_1px_rgba(123,132,178,0.18)]"
+                                      : "bg-white"
+                                } ${canUseAdminTools ? "cursor-grab active:cursor-grabbing" : ""} ${
+                                  draggingScheduleEntryId === entry.id ? "scale-[0.985] opacity-55" : ""
+                                }`}
+                              >
+                                {draggingScheduleEntryId && scheduleDropTarget?.entryId === entry.id && draggingScheduleEntryId !== entry.id ? (
+                                  <span
+                                    className={`pointer-events-none absolute left-3 right-3 z-20 h-1 rounded-full bg-[#7c84b7] shadow-[0_0_0_4px_rgba(124,132,183,0.12)] ${
+                                      scheduleDropTarget.placement === "before" ? "top-0 -translate-y-1/2" : "bottom-0 translate-y-1/2"
+                                    }`}
+                                  />
+                                ) : null}
+                                <div className="grid gap-3">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2">
+                                      <span className="inline-flex min-w-10 items-center justify-center rounded-full bg-[rgba(90,93,240,0.1)] px-2.5 py-1 text-xs font-bold text-[#5a5df0]">
+                                        {rowIndex + 1}
+                                      </span>
+                                      <span className="rounded-full bg-[rgba(90,93,240,0.1)] px-2.5 py-1 text-xs font-bold text-[#5a5df0]">
+                                        {match ? scheduleMatchNumber(match, snapshot.matches, snapshot.tournament.format, participantById) : "試合未設定"}
+                                      </span>
+                                    </div>
+                                    {effectiveStatus === "completed" ? (
+                                      <span className="rounded-full bg-[rgba(52,191,132,0.12)] px-2.5 py-1 text-xs font-bold text-[#34bf84]">
+                                        完了
+                                      </span>
+                                    ) : isCurrentMatch ? (
+                                      <span className="rounded-full bg-[rgba(123,132,183,0.12)] px-2.5 py-1 text-xs font-bold text-[#5d6683]">
+                                        現在の試合
+                                      </span>
+                                    ) : null}
+                                  </div>
+
+                                  {match ? (
+                                    <div className="grid gap-1 text-center text-lg font-bold leading-snug text-[#1e2a4a]">
+                                      <p className="break-words">{nameFor(match.participant1_id, participantById)}</p>
+                                      <p className="text-[11px] font-bold tracking-[0.24em] text-[#8a93ac]">VS</p>
+                                      <p className="break-words">{nameFor(match.participant2_id, participantById)}</p>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-[#6f7b94]">元の試合情報が見つかりません</p>
+                                  )}
+
+                                  {canUseAdminTools ? (
+                                    <div className="grid gap-2">
+                                      <input
+                                        className="input px-3 py-2 text-sm"
+                                        onBlur={() => {
+                                          if (hasScheduleDraftChanges) void saveScheduleEntry(entry.id);
+                                        }}
+                                        onChange={(event) => setScheduleField(entry.id, "courtName", event.target.value)}
+                                        onPointerDown={(event) => event.stopPropagation()}
+                                        value={draft.courtName}
+                                      />
+                                      <div className="flex flex-wrap justify-end gap-1">
+                                        <button
+                                          className="btn-ghost px-2 py-2 text-xs"
+                                          disabled={isBusy}
+                                          onPointerDown={(event) => {
+                                            event.stopPropagation();
+                                            startScheduleDrag(entry.id, event, true);
+                                          }}
+                                          type="button"
+                                        >
+                                          掴んで移動
+                                        </button>
+                                        <button className="btn-danger-ghost px-2 py-2 text-xs" disabled={isBusy} onClick={() => void removeScheduleEntry(entry.id)} type="button">
+                                          外す
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </article>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
+
+                <div className="hidden overflow-x-auto rounded-[28px] border border-[rgba(114,132,181,0.16)] bg-white shadow-[0_18px_40px_rgba(114,134,186,0.08)] md:block">
                 <table className="min-w-[920px] border-collapse text-sm">
                   <thead>
                     <tr>
@@ -1659,7 +1778,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                 effectiveStatus === "completed"
                                   ? "bg-[rgba(243,246,255,0.64)] text-[#6f7b94]"
                                   : isCurrentMatch
-                                    ? "bg-[rgba(90,93,240,0.12)] shadow-[inset_0_0_0_1px_rgba(90,93,240,0.14)]"
+                                    ? "bg-[linear-gradient(135deg,rgba(247,245,255,0.96),rgba(241,246,255,0.98))] shadow-[inset_0_0_0_1px_rgba(123,132,178,0.18)]"
                                     : "bg-white"
                               } ${
                                 canUseAdminTools ? "cursor-grab active:cursor-grabbing" : ""
@@ -1684,7 +1803,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                       完了
                                     </span>
                                   ) : isCurrentMatch ? (
-                                    <span className="rounded-full bg-[rgba(90,93,240,0.16)] px-2.5 py-1 text-xs font-bold text-[#4f53ea]">
+                                    <span className="rounded-full bg-[rgba(123,132,183,0.12)] px-2.5 py-1 text-xs font-bold text-[#5d6683]">
                                       現在の試合
                                     </span>
                                   ) : null}
@@ -1738,7 +1857,8 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                     ))}
                   </tbody>
                 </table>
-              </div>
+                </div>
+              </>
             )}
           </div>
 
