@@ -1088,7 +1088,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                   <option value="">選択してください</option>
                   {snapshot.participants.map((participant) => (
                     <option key={participant.id} value={participant.id}>
-                      {participant.name}
+                      {displayLabel(participant.name)}
                     </option>
                   ))}
                 </select>
@@ -1456,7 +1456,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                     </div>
                   ) : (
                     <div className="flex min-w-0 items-center gap-2">
-                      <span className="min-w-0 truncate font-semibold">{participant.name}</span>
+                      <span className="min-w-0 truncate font-semibold" title={participant.name}>{displayLabel(participant.name)}</span>
                       {isAdminMode ? (
                         <button
                           className="rounded btn-ghost px-2 py-1 text-xs"
@@ -1593,7 +1593,11 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-[#5a5df0]">{scheduleMatchNumber(match, snapshot.matches, snapshot.tournament.format, participantById)}</p>
-                        <p className="mt-1 font-bold">{nameFor(match.participant1_id, participantById)} vs {nameFor(match.participant2_id, participantById)}</p>
+                        <p className="mt-1 font-bold">
+                          <span title={nameFor(match.participant1_id, participantById)}>{displayLabel(nameFor(match.participant1_id, participantById))}</span>
+                          {" "}vs{" "}
+                          <span title={nameFor(match.participant2_id, participantById)}>{displayLabel(nameFor(match.participant2_id, participantById))}</span>
+                        </p>
                         {scheduleMatchTypeLabel(match, snapshot.matches, snapshot.tournament.format) ? (
                           <p className="mt-1 text-sm text-[#6f7b94]">{scheduleMatchTypeLabel(match, snapshot.matches, snapshot.tournament.format)}</p>
                         ) : null}
@@ -1630,7 +1634,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                         className="overflow-hidden rounded-[28px] border border-[rgba(114,132,181,0.16)] bg-white shadow-[0_18px_40px_rgba(114,134,186,0.08)]"
                       >
                         <div className="border-b border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.96)] px-4 py-4 text-center text-base font-bold text-[#1e2a4a]">
-                          {courtName}
+                          <span title={courtName}>{displayLabel(courtName)}</span>
                         </div>
                         <div className="grid gap-0">
                           {courtEntries.map((entry, rowIndex) => {
@@ -1669,7 +1673,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                       <span className="inline-flex min-w-10 items-center justify-center rounded-full bg-[rgba(90,93,240,0.1)] px-2.5 py-1 text-xs font-bold text-[#5a5df0]">
                                         {rowIndex + 1}
                                       </span>
-                                      <span className="rounded-full bg-[rgba(90,93,240,0.1)] px-2.5 py-1 text-xs font-bold text-[#5a5df0]">
+                                      <span className="rounded-full bg-[rgba(90,93,240,0.1)] px-2.5 py-1 text-xs font-bold text-[#5a5df0]" title={match ? scheduleMatchNumber(match, snapshot.matches, snapshot.tournament.format, participantById) : "試合未設定"}>
                                         {match ? scheduleMatchNumber(match, snapshot.matches, snapshot.tournament.format, participantById) : "試合未設定"}
                                       </span>
                                     </div>
@@ -1686,9 +1690,9 @@ export default function TournamentScreen({ slug }: { slug: string }) {
 
                                   {match ? (
                                     <div className="grid gap-1 text-center text-lg font-bold leading-snug text-[#1e2a4a]">
-                                      <p className="break-words">{nameFor(match.participant1_id, participantById)}</p>
+                                      <p className="break-words" title={nameFor(match.participant1_id, participantById)}>{displayLabel(nameFor(match.participant1_id, participantById))}</p>
                                       <p className="text-[11px] font-bold tracking-[0.24em] text-[#8a93ac]">VS</p>
-                                      <p className="break-words">{nameFor(match.participant2_id, participantById)}</p>
+                                      <p className="break-words" title={nameFor(match.participant2_id, participantById)}>{displayLabel(nameFor(match.participant2_id, participantById))}</p>
                                     </div>
                                   ) : (
                                     <p className="text-sm text-[#6f7b94]">元の試合情報が見つかりません</p>
@@ -1739,15 +1743,15 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 </div>
 
                 <div className="hidden overflow-x-auto rounded-[28px] border border-[rgba(114,132,181,0.16)] bg-white shadow-[0_18px_40px_rgba(114,134,186,0.08)] md:block">
-                <table className="min-w-[920px] border-collapse text-sm">
+                <table className="min-w-[720px] border-collapse text-sm">
                   <thead>
                     <tr>
                       <th className="sticky left-0 z-20 w-14 min-w-14 border border-[rgba(114,132,181,0.18)] bg-[rgba(248,250,255,0.98)] px-2 py-3 text-center font-bold text-[#6f7b94]">
                         試合順
                       </th>
                       {scheduleTable.courts.map((courtName) => (
-                        <th key={courtName} className="min-w-64 border border-[rgba(114,132,181,0.18)] bg-[rgba(248,250,255,0.98)] px-3 py-3 text-center font-bold text-[#1e2a4a]">
-                          {courtName}
+                        <th key={courtName} className="min-w-[11rem] border border-[rgba(114,132,181,0.18)] bg-[rgba(248,250,255,0.98)] px-2 py-3 text-center font-bold text-[#1e2a4a]">
+                          <span title={courtName}>{displayLabel(courtName)}</span>
                         </th>
                       ))}
                     </tr>
@@ -1785,7 +1789,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                               onPointerEnter={(event) => enterScheduleDropTarget(entry.id, event)}
                               onPointerMove={(event) => enterScheduleDropTarget(entry.id, event)}
                               onPointerUp={(event) => finishScheduleDrag(event)}
-                              className={`relative touch-none select-none border border-[rgba(114,132,181,0.14)] px-3 py-3 align-top transition ${
+                              className={`relative touch-none select-none border border-[rgba(114,132,181,0.14)] px-2 py-3 align-top transition ${
                                 effectiveStatus === "completed"
                                   ? "bg-[rgba(243,246,255,0.64)] text-[#6f7b94]"
                                   : isCurrentMatch
@@ -1806,7 +1810,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                               ) : null}
                               <div className="grid gap-2">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <span className="rounded-full bg-[rgba(90,93,240,0.1)] px-2.5 py-1 text-xs font-bold text-[#5a5df0]">
+                                  <span className="rounded-full bg-[rgba(90,93,240,0.1)] px-2 py-1 text-xs font-bold text-[#5a5df0]" title={match ? scheduleMatchNumber(match, snapshot.matches, snapshot.tournament.format, participantById) : "試合未設定"}>
                                     {match ? scheduleMatchNumber(match, snapshot.matches, snapshot.tournament.format, participantById) : "試合未設定"}
                                   </span>
                                   {effectiveStatus === "completed" ? (
@@ -1821,9 +1825,9 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                 </div>
                                 {match ? (
                                   <div className="grid gap-1 text-center text-base font-bold leading-snug text-[#1e2a4a]">
-                                    <p className="break-words">{nameFor(match.participant1_id, participantById)}</p>
+                                    <p className="break-words" title={nameFor(match.participant1_id, participantById)}>{displayLabel(nameFor(match.participant1_id, participantById))}</p>
                                     <p className="text-xs font-bold tracking-[0.2em] text-[#7c86a2]">VS</p>
-                                    <p className="break-words">{nameFor(match.participant2_id, participantById)}</p>
+                                    <p className="break-words" title={nameFor(match.participant2_id, participantById)}>{displayLabel(nameFor(match.participant2_id, participantById))}</p>
                                   </div>
                                 ) : (
                                   <p className="text-xs text-[#6f7b94]">元の試合情報が見つかりません</p>
@@ -2047,7 +2051,7 @@ function Standings({ snapshot }: { snapshot: TournamentSnapshot }) {
             {group.standings.map((standing) => (
               <div key={standing.participantId} className="grid grid-cols-[2rem_1fr_auto] items-center gap-2 rounded-[24px] border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.92)] px-3 py-2 text-sm">
                 <span className="grid h-7 w-7 place-items-center rounded-xl bg-[rgba(90,93,240,0.1)] font-bold text-[#5a5df0]">{standing.rank}</span>
-                <span className="font-semibold">{standing.name}</span>
+                <span className="font-semibold" title={standing.name}>{displayLabel(standing.name)}</span>
                 <span className="text-[#6f7b94]">{standing.wins}勝 / 得失{standing.pointDiff}</span>
               </div>
             ))}
@@ -2091,10 +2095,10 @@ function LeagueMatrix({
                 <table className="min-w-max border-collapse text-sm">
                   <thead>
                     <tr>
-                      <th className="sticky left-0 z-10 min-w-28 border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.96)] px-2 py-2 text-left text-[#6f7b94]">名前</th>
+                      <th className="sticky left-0 z-10 min-w-[5.5rem] border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.96)] px-2 py-2 text-left text-[#6f7b94]">名前</th>
                       {block.participants.map((participant) => (
-                        <th key={participant.id} className="min-w-24 border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.96)] px-2 py-2 text-center font-bold text-[#6f7b94]">
-                          {participant.name}
+                        <th key={participant.id} className="min-w-[4.5rem] border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.96)] px-1.5 py-2 text-center font-bold text-[#6f7b94]">
+                          <span title={participant.name}>{displayLabel(participant.name)}</span>
                         </th>
                       ))}
                     </tr>
@@ -2102,11 +2106,11 @@ function LeagueMatrix({
                   <tbody>
                     {block.participants.map((row) => (
                       <tr key={row.id}>
-                        <th className="sticky left-0 z-10 min-w-28 border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.96)] px-2 py-2 text-left font-bold">
-                          {row.name}
+                        <th className="sticky left-0 z-10 min-w-[5.5rem] border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.96)] px-2 py-2 text-left font-bold">
+                          <span title={row.name}>{displayLabel(row.name)}</span>
                         </th>
                         {block.participants.map((column) => (
-                          <td key={column.id} className="h-14 min-w-24 border border-[rgba(114,132,181,0.14)] px-2 py-2 text-center">
+                          <td key={column.id} className="h-12 min-w-[4.5rem] border border-[rgba(114,132,181,0.14)] px-1.5 py-2 text-center">
                             {row.id === column.id ? (
                               <span className="text-[#6f7b94]">-</span>
                             ) : (
@@ -2185,7 +2189,7 @@ function LeagueCell({
       type="button"
     >
       <p className="font-bold">{result} {rowScore}-{columnScore}</p>
-      <p className="text-xs text-[#6f7b94]">{opponent}</p>
+      <p className="text-xs text-[#6f7b94]" title={opponent}>{displayLabel(opponent)}</p>
     </button>
   );
 }
@@ -2209,9 +2213,9 @@ function Bracket({
     <section className="panel">
       <p className="eyebrow">Bracket</p>
       <h2 className="text-lg font-bold">{title}</h2>
-      <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
         {rounds.map((round, roundIndex) => (
-          <div key={round[0]?.round ?? "empty"} className="min-w-56 flex-1">
+          <div key={round[0]?.round ?? "empty"} className="min-w-[11rem] flex-1">
             <p className="mb-2 text-sm font-bold text-[#5a5df0]">{bracketRoundLabel(roundIndex, rounds.length)}</p>
             <div className="grid gap-2">
               {round.map((match) => (
@@ -2243,9 +2247,9 @@ function BracketMatch({
   const canSelect = canSelectMatch(match);
 
   return (
-    <div className="rounded-[24px] border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.92)] p-3 text-sm shadow-lg shadow-[rgba(123,141,191,0.08)]">
-      <p className={`rounded-xl px-2 py-1 ${match.winner_id === match.participant1_id ? "bg-[rgba(90,93,240,0.1)] font-bold text-[#5a5df0]" : ""}`}>{left}</p>
-      <p className={`mt-1 rounded-xl px-2 py-1 ${match.winner_id === match.participant2_id ? "bg-[rgba(90,93,240,0.1)] font-bold text-[#5a5df0]" : ""}`}>{right}</p>
+    <div className="rounded-[20px] border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.92)] p-2.5 text-sm shadow-lg shadow-[rgba(123,141,191,0.08)]">
+      <p className={`rounded-xl px-2 py-1 ${match.winner_id === match.participant1_id ? "bg-[rgba(90,93,240,0.1)] font-bold text-[#5a5df0]" : ""}`} title={left}>{displayLabel(left)}</p>
+      <p className={`mt-1 rounded-xl px-2 py-1 ${match.winner_id === match.participant2_id ? "bg-[rgba(90,93,240,0.1)] font-bold text-[#5a5df0]" : ""}`} title={right}>{displayLabel(right)}</p>
       {isReady ? (
         <button
           className={`mt-2 w-full rounded px-2 py-2 font-bold transition focus:outline-none focus:ring-2 ${
@@ -2294,6 +2298,11 @@ function groupPlayoffMatches(matches: Match[]) {
 function nameFor(id: string | null, participantById: Map<string, PublicParticipant>) {
   if (!id) return "未定";
   return participantById.get(id)?.name ?? "未定";
+}
+
+function displayLabel(value: string, maxLength = 6) {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength)}...`;
 }
 
 function isMatchForParticipant(match: Match, participantId: string) {
