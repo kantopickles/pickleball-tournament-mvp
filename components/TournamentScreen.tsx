@@ -628,6 +628,17 @@ export default function TournamentScreen({ slug }: { slug: string }) {
     if (ok) showMessage("schedule", "success", "進行順を更新しました。", "");
   }
 
+  async function moveScheduleEntryWithinCourt(courtName: string, entryId: string, direction: "up" | "down") {
+    const courtEntries = scheduleTable.byCourt.get(courtName) ?? [];
+    const currentIndex = courtEntries.findIndex((entry) => entry.id === entryId);
+    if (currentIndex < 0) return;
+
+    const targetEntry = direction === "up" ? courtEntries[currentIndex - 1] : courtEntries[currentIndex + 1];
+    if (!targetEntry) return;
+
+    await reorderScheduleEntry(entryId, targetEntry.id, direction === "up" ? "before" : "after");
+  }
+
   async function saveScheduleEntry(entryId: string) {
     const draft = scheduleDraft[entryId];
     if (!draft) return;
@@ -1635,11 +1646,6 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                               <article
                                 key={entry.id}
                                 data-schedule-entry-id={entry.id}
-                                onPointerCancel={cancelScheduleDrag}
-                                onPointerDown={(event) => startScheduleDrag(entry.id, event)}
-                                onPointerEnter={(event) => enterScheduleDropTarget(entry.id, event)}
-                                onPointerMove={(event) => enterScheduleDropTarget(entry.id, event)}
-                                onPointerUp={(event) => finishScheduleDrag(event)}
                                 className={`relative touch-none select-none border-t border-[rgba(114,132,181,0.12)] px-4 py-4 transition ${
                                   effectiveStatus === "completed"
                                     ? "bg-[rgba(243,246,255,0.68)] text-[#6f7b94]"
@@ -1703,13 +1709,18 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                         <button
                                           className="btn-ghost px-2 py-2 text-xs"
                                           disabled={isBusy}
-                                          onPointerDown={(event) => {
-                                            event.stopPropagation();
-                                            startScheduleDrag(entry.id, event, true);
-                                          }}
+                                          onClick={() => void moveScheduleEntryWithinCourt(courtName, entry.id, "up")}
                                           type="button"
                                         >
-                                          掴んで移動
+                                          前へ
+                                        </button>
+                                        <button
+                                          className="btn-ghost px-2 py-2 text-xs"
+                                          disabled={isBusy}
+                                          onClick={() => void moveScheduleEntryWithinCourt(courtName, entry.id, "down")}
+                                          type="button"
+                                        >
+                                          後へ
                                         </button>
                                         <button className="btn-danger-ghost px-2 py-2 text-xs" disabled={isBusy} onClick={() => void removeScheduleEntry(entry.id)} type="button">
                                           外す
