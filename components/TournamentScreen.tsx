@@ -1690,9 +1690,17 @@ export default function TournamentScreen({ slug }: { slug: string }) {
 
                                   {match ? (
                                     <div className="grid gap-1 text-center text-base font-bold leading-snug text-[#1e2a4a]">
-                                      <p className="break-words" title={nameFor(match.participant1_id, participantById)}>{displayLabel(nameFor(match.participant1_id, participantById))}</p>
+                                      <p className="flex items-center justify-center gap-1 break-words" title={nameFor(match.participant1_id, participantById)}>
+                                        <span className="text-xs text-[#7c86a2]">{matchResultMark(match, "participant1")}</span>
+                                        <span>{displayLabel(nameFor(match.participant1_id, participantById))}</span>
+                                        {match.participant1_score !== null ? <span className="text-sm text-[#5d6683]">{match.participant1_score}</span> : null}
+                                      </p>
                                       <p className="text-[11px] font-bold tracking-[0.24em] text-[#8a93ac]">VS</p>
-                                      <p className="break-words" title={nameFor(match.participant2_id, participantById)}>{displayLabel(nameFor(match.participant2_id, participantById))}</p>
+                                      <p className="flex items-center justify-center gap-1 break-words" title={nameFor(match.participant2_id, participantById)}>
+                                        <span className="text-xs text-[#7c86a2]">{matchResultMark(match, "participant2")}</span>
+                                        <span>{displayLabel(nameFor(match.participant2_id, participantById))}</span>
+                                        {match.participant2_score !== null ? <span className="text-sm text-[#5d6683]">{match.participant2_score}</span> : null}
+                                      </p>
                                     </div>
                                   ) : (
                                     <p className="text-sm text-[#6f7b94]">元の試合情報が見つかりません</p>
@@ -1825,9 +1833,17 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                 </div>
                                 {match ? (
                                   <div className="grid gap-0.5 text-center text-sm font-bold leading-snug text-[#1e2a4a]">
-                                    <p className="break-words" title={nameFor(match.participant1_id, participantById)}>{displayLabel(nameFor(match.participant1_id, participantById))}</p>
+                                    <p className="flex items-center justify-center gap-1 break-words" title={nameFor(match.participant1_id, participantById)}>
+                                      <span className="text-[10px] text-[#7c86a2]">{matchResultMark(match, "participant1")}</span>
+                                      <span>{displayLabel(nameFor(match.participant1_id, participantById))}</span>
+                                      {match.participant1_score !== null ? <span className="text-xs text-[#5d6683]">{match.participant1_score}</span> : null}
+                                    </p>
                                     <p className="text-xs font-bold tracking-[0.2em] text-[#7c86a2]">VS</p>
-                                    <p className="break-words" title={nameFor(match.participant2_id, participantById)}>{displayLabel(nameFor(match.participant2_id, participantById))}</p>
+                                    <p className="flex items-center justify-center gap-1 break-words" title={nameFor(match.participant2_id, participantById)}>
+                                      <span className="text-[10px] text-[#7c86a2]">{matchResultMark(match, "participant2")}</span>
+                                      <span>{displayLabel(nameFor(match.participant2_id, participantById))}</span>
+                                      {match.participant2_score !== null ? <span className="text-xs text-[#5d6683]">{match.participant2_score}</span> : null}
+                                    </p>
                                   </div>
                                 ) : (
                                   <p className="text-xs text-[#6f7b94]">元の試合情報が見つかりません</p>
@@ -2303,6 +2319,14 @@ function nameFor(id: string | null, participantById: Map<string, PublicParticipa
 function displayLabel(value: string, maxLength = 6) {
   if (value.length <= maxLength) return value;
   return `${value.slice(0, maxLength)}...`;
+}
+
+function matchResultMark(match: Match, side: "participant1" | "participant2") {
+  if (match.participant1_score === null || match.participant2_score === null) return "";
+  if (match.participant1_score === match.participant2_score) return "△";
+  const isParticipant1Winner = match.participant1_score > match.participant2_score;
+  if (side === "participant1") return isParticipant1Winner ? "○" : "×";
+  return isParticipant1Winner ? "×" : "○";
 }
 
 function isMatchForParticipant(match: Match, participantId: string) {
