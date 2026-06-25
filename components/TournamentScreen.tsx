@@ -2068,6 +2068,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
 
 function Standings({ snapshot }: { snapshot: TournamentSnapshot }) {
   const groups = groupStandings(snapshot.standings, snapshot.tournament.format === "league");
+  const showRankingRule = snapshot.tournament.format === "round_robin" || snapshot.tournament.format === "league";
 
   return (
     <section className="panel">
@@ -2087,6 +2088,15 @@ function Standings({ snapshot }: { snapshot: TournamentSnapshot }) {
           </div>
         ))}
       </div>
+      {showRankingRule ? (
+        <div className="mt-4 rounded-[18px] border border-[rgba(114,132,181,0.12)] bg-[rgba(248,250,255,0.72)] px-3 py-3 text-xs leading-6 text-[#6f7b94]">
+          <p className="font-semibold text-[#5d6683]">順位の決まり方</p>
+          <p>1. 勝利数が多い順</p>
+          <p>2. 勝利数が同じ場合は得失点差が大きい順</p>
+          <p>3. 勝利数と得失点差が同じ2名は直接対決の結果を優先</p>
+          <p>4. 3名以上が同条件で並んだ場合は参加者リスト順</p>
+        </div>
+      ) : null}
     </section>
   );
 }
