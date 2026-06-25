@@ -825,6 +825,15 @@ select option {
 
   .ranking-rule-summary {
     @apply flex items-center justify-between gap-3;
+    width: 100%;
+  }
+
+  .ranking-rule-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .ranking-rule-summary::marker {
+    content: "";
   }
 
   .ranking-rule-chevron {
