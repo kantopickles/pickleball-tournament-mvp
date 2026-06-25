@@ -1555,9 +1555,6 @@ export default function TournamentScreen({ slug }: { slug: string }) {
             <div>
               <p className="eyebrow">Schedule</p>
               <h2 className="text-xl font-bold">進行表</h2>
-              <p className="mt-2 text-sm leading-6 text-[#6f7b94]">
-                コートごとの試合順をここで管理します。将来の通知機能でも、この進行順をもとに次の試合を判断できる形にしています。
-              </p>
             </div>
             {canUseAdminTools ? (
               <div className="grid gap-2 sm:grid-cols-[12rem_auto]">
@@ -2089,14 +2086,21 @@ function Standings({ snapshot }: { snapshot: TournamentSnapshot }) {
         ))}
       </div>
       {showRankingRule ? (
-        <details className="mt-4 overflow-hidden rounded-[18px] border border-[rgba(114,132,181,0.12)] bg-[rgba(248,250,255,0.72)]">
-          <summary className="cursor-pointer list-none px-3 py-3 text-lg font-bold text-[#5d6683] marker:content-none">
-            順位の決まり方
+        <details className="ranking-rule mt-4 overflow-hidden rounded-[18px] border border-[rgba(114,132,181,0.12)] bg-[rgba(248,250,255,0.72)]">
+          <summary className="ranking-rule-summary cursor-pointer list-none px-3 py-3 text-lg font-bold text-[#5d6683] marker:content-none">
+            <span>順位の決まり方</span>
+            <span className="ranking-rule-chevron" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none">
+                <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
           </summary>
-          <div className="border-t border-[rgba(114,132,181,0.1)] px-3 py-3 text-xs leading-6 text-[#6f7b94]">
-            <p>1. 勝利数が多い順</p>
-            <p>2. 勝利数が同じ場合は得失点差が大きい順</p>
-            <p>3. 勝利数と得失点差が同じ2名は直接対決の結果を優先</p>
+          <div className="ranking-rule-content">
+            <div className="ranking-rule-content-inner border-t border-[rgba(114,132,181,0.1)] px-3 py-3 text-xs leading-6 text-[#6f7b94]">
+              <p>1. 勝利数が多い順</p>
+              <p>2. 勝利数が同じ場合は得失点差が大きい順</p>
+              <p>3. 勝利数と得失点差が同じ2名は直接対決の結果を優先</p>
+            </div>
           </div>
         </details>
       ) : null}
