@@ -69,15 +69,6 @@ const HomeTopBar = memo(function HomeTopBar({ onOpenCreateModal }: { onOpenCreat
           大会を作成
         </button>
       </nav>
-
-      <div className="topbar-actions">
-        <a className="topbar-link" href="#tournament-list">
-          既存の大会を見る
-        </a>
-        <button className="btn-primary btn-home-primary" onClick={onOpenCreateModal} type="button">
-          大会を作成
-        </button>
-      </div>
     </header>
   );
 });
@@ -211,6 +202,7 @@ export default function HomePage() {
   const [adminPin, setAdminPin] = useState("");
   const [participantPin, setParticipantPin] = useState("");
   const [tournaments, setTournaments] = useState<TournamentListItem[]>([]);
+  const [isLoadingTournaments, setIsLoadingTournaments] = useState(true);
   const [message, setMessage] = useState<InlineMessage | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [createModalState, setCreateModalState] = useState<CreateModalState>("closed");
@@ -219,6 +211,9 @@ export default function HomePage() {
   const [deletingSlug, setDeletingSlug] = useState<string | null>(null);
   const coverLibraryInputRef = useRef<HTMLInputElement | null>(null);
   const coverCameraInputRef = useRef<HTMLInputElement | null>(null);
+  const createModalRef = useRef<HTMLDivElement | null>(null);
+  const createNameInputRef = useRef<HTMLInputElement | null>(null);
+  const createModalTriggerRef = useRef<HTMLElement | null>(null);
   const cropDragStateRef = useRef<{ pointerId: number; startX: number; startY: number; startOffsetX: number; startOffsetY: number } | null>(null);
 
   const isCreateModalVisible = createModalState !== "closed";
@@ -356,12 +351,32 @@ export default function HomePage() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         closeCreateModal();
+        return;
+      }
+
+      if (event.key !== "Tab" || !createModalRef.current) return;
+      const focusable = Array.from(
+        createModalRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+        )
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
       }
     };
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKeyDown);
+    window.requestAnimationFrame(() => createNameInputRef.current?.focus());
 
     return () => {
       document.body.style.overflow = previousOverflow;
@@ -370,19 +385,30 @@ export default function HomePage() {
   }, [isCreateModalVisible]);
 
   async function loadTournaments() {
-    const response = await fetch("/api/tournaments");
-    const payload = (await response.json()) as { tournaments?: TournamentListItem[]; error?: string };
+    setIsLoadingTournaments(true);
+    try {
+      const response = await fetch("/api/tournaments");
+      const payload = (await response.json()) as { tournaments?: TournamentListItem[]; error?: string };
 
-    if (!response.ok) {
+      if (!response.ok) {
+        setMessage({
+          text: formatFriendlyMessage(payload.error ?? "大会一覧を読み込めませんでした。", "大会一覧をうまく読み込めませんでした。"),
+          tone: "error",
+          scope: "list"
+        });
+        return;
+      }
+
+      setTournaments(payload.tournaments ?? []);
+    } catch {
       setMessage({
-        text: formatFriendlyMessage(payload.error ?? "大会一覧を読み込めませんでした。", "大会一覧をうまく読み込めませんでした。"),
+        text: "大会一覧をうまく読み込めませんでした。通信を確認して、もう一度お試しください。",
         tone: "error",
         scope: "list"
       });
-      return;
+    } finally {
+      setIsLoadingTournaments(false);
     }
-
-    setTournaments(payload.tournaments ?? []);
   }
 
   async function waitForNextPaint() {
@@ -420,6 +446,7 @@ export default function HomePage() {
   }
 
   const openCreateModal = useCallback(() => {
+    createModalTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setMessage((current) => (current?.scope === "create" ? null : current));
     setCreateModalState("open");
   }, []);
@@ -429,6 +456,7 @@ export default function HomePage() {
     setCreateModalState("closing");
     window.setTimeout(() => {
       setCreateModalState("closed");
+      createModalTriggerRef.current?.focus();
     }, 260);
   }, [isCreateModalClosing, isCreateModalSubmitting, isCreateModalVisible, isSaving]);
 
@@ -539,13 +567,32 @@ export default function HomePage() {
                 参加者の方は大会一覧より該当試合を開いて下さい
               </p>
             </div>
+            {!isLoadingTournaments ? (
+              <span className="list-count-badge" aria-label={`${tournaments.length}件の大会`}>
+                {tournaments.length}件
+              </span>
+            ) : null}
           </div>
 
-          {tournaments.length === 0 ? (
-            <div className="archive-card archive-card-light mt-6">
-              <p className="section-copy">
-                まだ大会はありません。下のフォームから最初の大会を作成できます。
-              </p>
+          {isLoadingTournaments ? (
+            <div className="tournament-card-grid mt-6" aria-label="大会一覧を読み込み中" aria-live="polite">
+              {[0, 1, 2].map((item) => (
+                <div className="tournament-card-skeleton" key={item} aria-hidden="true">
+                  <span className="skeleton-image" />
+                  <span className="skeleton-line skeleton-line-title" />
+                  <span className="skeleton-line skeleton-line-meta" />
+                  <span className="skeleton-button" />
+                </div>
+              ))}
+            </div>
+          ) : tournaments.length === 0 ? (
+            <div className="empty-state mt-6">
+              <span className="empty-state-icon" aria-hidden="true">＋</span>
+              <div>
+                <h3>最初の大会を作成しましょう</h3>
+                <p>大会名とPINを設定すると、専用の大会ページが作られます。</p>
+              </div>
+              <button className="btn-primary" onClick={openCreateModal} type="button">大会を作成</button>
             </div>
           ) : (
             <div className="tournament-card-grid mt-6">
@@ -571,19 +618,35 @@ export default function HomePage() {
                     </div>
                   </a>
                   <div className="tournament-card-top">
-                    <h3>{tournament.name}</h3>
-                  </div>
-
-                  <div className="tournament-meta">
-                    <span>作成日 {new Date(tournament.created_at).toLocaleDateString("ja-JP")}</span>
+                    <div className="min-w-0">
+                      <h3>{tournament.name}</h3>
+                      <div className="tournament-meta">
+                        <span>{new Date(tournament.created_at).toLocaleDateString("ja-JP", { year: "numeric", month: "short", day: "numeric" })}</span>
+                      </div>
+                    </div>
+                    <button
+                      aria-expanded={pendingDeleteSlug === tournament.slug}
+                      aria-label={`${tournament.name}を削除`}
+                      className="tournament-card-menu-button"
+                      disabled={deletingSlug === tournament.slug}
+                      onClick={() => openDeletePrompt(tournament.slug)}
+                      title="大会を削除"
+                      type="button"
+                    >
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z" fill="currentColor" />
+                      </svg>
+                    </button>
                   </div>
 
                   <a className="btn-ghost tournament-open-button" href={`/t/${tournament.slug}`}>
-                    この大会にログイン
+                    <span>この大会にログイン</span>
+                    <span aria-hidden="true">→</span>
                   </a>
 
-                  <div className="tournament-delete-row">
-                    {pendingDeleteSlug === tournament.slug ? (
+                  {pendingDeleteSlug === tournament.slug ? (
+                    <div className="tournament-delete-row" role="group" aria-label={`${tournament.name}の削除確認`}>
+                      <p className="text-sm font-semibold text-[#9f3f3f]">この大会を削除しますか？</p>
                       <div className="grid gap-2">
                         <input
                           className="input input-light"
@@ -612,23 +675,14 @@ export default function HomePage() {
                           </button>
                         </div>
                       </div>
-                    ) : (
-                      <button
-                        className="btn-ghost btn-danger-light"
-                        disabled={deletingSlug === tournament.slug}
-                        onClick={() => openDeletePrompt(tournament.slug)}
-                        type="button"
-                      >
-                        削除
-                      </button>
-                    )}
-                  </div>
+                    </div>
+                  ) : null}
                 </article>
               ))}
             </div>
           )}
           {message?.scope === "list" ? (
-            <p className={`system-message mt-5 ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>
+            <p aria-live="polite" className={`system-message mt-5 ${message.tone === "error" ? "system-message-error" : "system-message-success"}`} role={message.tone === "error" ? "alert" : "status"}>
               {message.text}
             </p>
           ) : null}
@@ -636,7 +690,6 @@ export default function HomePage() {
 
         {isCreateModalVisible ? (
           <div
-            aria-hidden={isSaving}
             className={`create-modal-backdrop ${isCreateModalClosing ? "is-closing" : ""} ${isCreateModalSubmitting ? "is-submitting" : ""}`}
             onClick={closeCreateModal}
             role="presentation"
@@ -644,9 +697,12 @@ export default function HomePage() {
             <div
               aria-labelledby="create-tournament-modal-title"
               aria-modal="true"
+              aria-busy={isSaving}
               className={`create-modal-card form-shell form-shell-home ${isCreateModalClosing ? "is-closing" : ""} ${isCreateModalSubmitting ? "is-submitting" : ""}`}
               onClick={(event) => event.stopPropagation()}
+              ref={createModalRef}
               role="dialog"
+              tabIndex={-1}
             >
               <div className="create-modal-head">
                 <div>
@@ -656,18 +712,23 @@ export default function HomePage() {
                     入力が終わると、そのまま専用の大会ページへ移動します。
                   </p>
                 </div>
-                <button className="create-modal-close" disabled={isSaving} onClick={closeCreateModal} type="button">
-                  閉じる
+                <button aria-label="大会作成画面を閉じる" className="create-modal-close" disabled={isSaving} onClick={closeCreateModal} type="button">
+                  <span aria-hidden="true">×</span>
                 </button>
               </div>
 
-              <form className="mt-6 flex flex-col gap-4" onSubmit={createTournament}>
+              <form className="create-modal-form mt-6 flex flex-col gap-4" onSubmit={createTournament}>
+                <div className="form-section-heading">
+                  <span>1</span>
+                  <div><strong>大会の基本設定</strong><small>大会名と試合の形式を決めます</small></div>
+                </div>
                 <label className="field field-light">
                   大会名
                   <input
                     className="input input-light"
                     onChange={(event) => setName(event.target.value)}
                     placeholder="例：第3回 関東ピックルズ杯"
+                    ref={createNameInputRef}
                     value={name}
                   />
                 </label>
@@ -719,6 +780,10 @@ export default function HomePage() {
                   </label>
                 ) : null}
 
+                <div className="form-section-heading form-section-heading-spaced">
+                  <span>2</span>
+                  <div><strong>アクセス用PIN</strong><small>管理者と参加者の入口を分けて守ります</small></div>
+                </div>
                 <label className="field field-light">
                   作成用PIN
                   <input
@@ -754,10 +819,14 @@ export default function HomePage() {
                     pattern="[0-9]{4}"
                     placeholder="4桁の数字"
                     type="password"
-                    value={participantPin}
-                  />
+                  value={participantPin}
+                />
                 </label>
 
+                <div className="form-section-heading form-section-heading-spaced">
+                  <span>3</span>
+                  <div><strong>大会画像</strong><small>任意です。あとから管理者メニューでも変更できます</small></div>
+                </div>
                 <label className="field field-light">
                   大会画像
                   <input
@@ -880,7 +949,7 @@ export default function HomePage() {
                   </button>
                 </div>
                 {message?.scope === "create" ? (
-                  <p className={`system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>
+                  <p aria-live="polite" className={`system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`} role={message.tone === "error" ? "alert" : "status"}>
                     {message.text}
                   </p>
                 ) : null}

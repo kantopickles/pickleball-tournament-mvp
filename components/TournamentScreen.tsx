@@ -358,6 +358,23 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   }, [originalCoverImageUrl]);
 
   useEffect(() => {
+    if (!activeMatchId) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setActiveMatchId(null);
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeMatchId]);
+
+  useEffect(() => {
     if (!originalCoverImageUrl) {
       if (!snapshot?.tournament.cover_image_url) {
         setCoverImageUrl(null);
@@ -899,34 +916,48 @@ export default function TournamentScreen({ slug }: { slug: string }) {
 
   if (!snapshot) {
     return (
-      <main className="app-shell">
-        <div className="page-wrap">
-          <section className="hero-panel mx-auto max-w-2xl" data-reveal>
-            <p className="eyebrow">Access</p>
-            <h1 className="mt-2 text-3xl font-bold leading-tight">大会ページを開く</h1>
-            <p className="mt-3 text-sm leading-6 text-[#6f7b94]">
-              参加者名や試合情報を表示する前に、PINで確認します。参加者は参加者PIN、主催者は管理者PINを入力してください。
-            </p>
+      <main className="app-shell access-page">
+        <div className="page-wrap access-page-wrap">
+          <a className="access-back-link" href="/">
+            <span aria-hidden="true">←</span> 大会一覧へ戻る
+          </a>
+          <section className="access-card" data-reveal>
+            <div className="access-card-intro">
+              <span className="access-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 2a5 5 0 0 0-5 5v2H5.75A2.75 2.75 0 0 0 3 11.75v7.5A2.75 2.75 0 0 0 5.75 22h12.5A2.75 2.75 0 0 0 21 19.25v-7.5A2.75 2.75 0 0 0 18.25 9H17V7a5 5 0 0 0-5-5Zm-3 7V7a3 3 0 1 1 6 0v2H9Zm3 4a2 2 0 0 1 1 3.73V19h-2v-2.27A2 2 0 0 1 12 13Z" fill="currentColor" />
+                </svg>
+              </span>
+              <div>
+                <p className="eyebrow">Secure access</p>
+                <h1>大会にログイン</h1>
+                <p>参加者は参加者PIN、主催者は管理者PINを入力してください。</p>
+              </div>
+            </div>
             {isRestoringAccess ? (
-              <p className="mt-4 rounded-2xl border border-[rgba(90,93,240,0.14)] bg-[rgba(90,93,240,0.06)] px-4 py-3 text-sm text-[#4a56b2]">
-                前回のログイン状態を確認しています...
+              <p className="access-restoring" aria-live="polite">
+                <span className="loading-spinner" aria-hidden="true" /> 前回のログイン状態を確認しています
               </p>
             ) : null}
-            <form className="mt-6 grid gap-4" onSubmit={unlockTournamentAccess}>
-              <div className="grid gap-2 sm:grid-cols-2">
+            <form className="access-form" onSubmit={unlockTournamentAccess}>
+              <div className="access-role-switch" role="group" aria-label="ログインする役割">
                 <button
-                  className={accessMode === "participant" ? "btn-primary" : "btn-ghost"}
+                  aria-pressed={accessMode === "participant"}
+                  className={accessMode === "participant" ? "access-role-button is-active" : "access-role-button"}
                   onClick={() => setAccessMode("participant")}
                   type="button"
                 >
-                  参加者として開く
+                  <span aria-hidden="true">♙</span>
+                  <span><strong>参加者</strong><small>自分の試合を入力</small></span>
                 </button>
                 <button
-                  className={accessMode === "admin" ? "btn-primary" : "btn-ghost"}
+                  aria-pressed={accessMode === "admin"}
+                  className={accessMode === "admin" ? "access-role-button is-active" : "access-role-button"}
                   onClick={() => setAccessMode("admin")}
                   type="button"
                 >
-                  管理者として開く
+                  <span aria-hidden="true">⚙</span>
+                  <span><strong>管理者</strong><small>大会を編集・管理</small></span>
                 </button>
               </div>
               <label className="field">
@@ -942,8 +973,8 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                   value={accessPin}
                 />
               </label>
-              <div className="flex flex-wrap gap-2">
-                <button className="btn-primary min-w-36" disabled={isBusy} type="submit">
+              <div className="access-actions">
+                <button className="btn-primary access-login-button" disabled={isBusy || isRestoringAccess} type="submit">
                   {isBusy ? "確認中..." : "ログイン"}
                 </button>
                 <a className="btn-ghost" href={`/t/${slug}/guide`}>
@@ -951,7 +982,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 </a>
               </div>
               {message?.scope === "access" ? (
-                <p className={`system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>{message.text}</p>
+                <p aria-live="polite" className={`system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`} role={message.tone === "error" ? "alert" : "status"}>{message.text}</p>
               ) : null}
             </form>
           </section>
@@ -1124,8 +1155,8 @@ export default function TournamentScreen({ slug }: { slug: string }) {
         ) : null}
 
         {isAdminMode ? (
-          <section className="grid gap-4 md:grid-cols-2" data-reveal>
-            <form onSubmit={addParticipant} className="panel">
+          <section className="grid gap-4" data-reveal>
+            <section className="panel admin-settings-panel">
               <p className="eyebrow">Admin</p>
               <h2 className="mt-1 text-lg font-bold">管理者メニュー</h2>
               <div className="mt-3 grid gap-3">
@@ -1332,26 +1363,32 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                     トップ画像を更新
                   </button>
                 </div>
-                {snapshot.tournament.format === "league" ? (
-                  <label className="field">
-                    追加先ブロック
-                    <select
-                      className="input"
-                      value={participantBlockNumber}
-                      onChange={(event) => setParticipantBlockNumber(Number(event.target.value))}
-                    >
-                      {Array.from({ length: Math.max(snapshot.tournament.block_count ?? 1, 1) }, (_, index) => index + 1).map((blockNumber) => (
-                        <option key={blockNumber} value={blockNumber}>
-                          ブロック{blockNumber}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null}
-                <input className="input" value={participantName} onChange={(event) => setParticipantName(event.target.value)} placeholder="参加者名" />
-                <button className="btn-primary" disabled={isBusy || !canUseAdminTools} type="submit">
-                  参加者を追加
-                </button>
+                <form className="sub-panel admin-participant-form" onSubmit={addParticipant}>
+                  <div>
+                    <p className="admin-section-title">参加者を追加</p>
+                    <p className="admin-section-copy">名前を入力して参加者リストへ追加します。</p>
+                  </div>
+                  {snapshot.tournament.format === "league" ? (
+                    <label className="field">
+                      追加先ブロック
+                      <select
+                        className="input"
+                        value={participantBlockNumber}
+                        onChange={(event) => setParticipantBlockNumber(Number(event.target.value))}
+                      >
+                        {Array.from({ length: Math.max(snapshot.tournament.block_count ?? 1, 1) }, (_, index) => index + 1).map((blockNumber) => (
+                          <option key={blockNumber} value={blockNumber}>
+                            ブロック{blockNumber}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                  <input aria-label="追加する参加者名" className="input" value={participantName} onChange={(event) => setParticipantName(event.target.value)} placeholder="参加者名" />
+                  <button className="btn-primary" disabled={isBusy || !canUseAdminTools} type="submit">
+                    参加者を追加
+                  </button>
+                </form>
                 {snapshot.tournament.format === "league" ? (
                   <div className="sub-panel grid gap-2">
                     <div className="grid grid-cols-2 gap-2">
@@ -1384,16 +1421,16 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                         </select>
                       </label>
                     </div>
-                    <button className="btn-danger" disabled={isBusy || !canUseAdminTools} onClick={() => void generatePlayoff()} type="button">
+                    <button className="btn-primary" disabled={isBusy || !canUseAdminTools} onClick={() => void generatePlayoff()} type="button">
                       {playoffTitle(playoffRankStart, playoffRankEnd)}作成
                     </button>
                   </div>
                 ) : null}
               </div>
               {message?.scope === "admin" ? (
-                <p className={`system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>{message.text}</p>
+                <p aria-live="polite" className={`system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`} role={message.tone === "error" ? "alert" : "status"}>{message.text}</p>
               ) : null}
-            </form>
+            </section>
           </section>
         ) : null}
 
@@ -1404,7 +1441,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               <h2 className="text-lg font-bold">参加者</h2>
             </div>
             {isAdminMode ? (
-              <button className="btn-danger px-3 py-2 text-sm" disabled={isBusy || !canUseAdminTools} onClick={() => void generateDraw()} type="button">
+              <button className="btn-primary px-3 py-2 text-sm" disabled={isBusy || !canUseAdminTools} onClick={() => void generateDraw()} type="button">
                 ドロー生成
               </button>
             ) : null}
@@ -1930,19 +1967,25 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                     : `R${match.round} / ${match.position}`;
 
               return (
-                <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(14,22,46,0.38)] px-4 py-5 backdrop-blur-md sm:px-6 sm:py-8">
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(14,22,46,0.38)] px-4 py-5 backdrop-blur-md sm:px-6 sm:py-8" onClick={closeMatchModal} role="presentation">
                   <div className="mx-auto grid min-h-full max-w-4xl place-items-center">
-                    <section className="w-full animate-[modal-rise-in_0.38s_ease-out] rounded-[32px] border border-[rgba(255,255,255,0.74)] bg-[rgba(255,255,255,0.96)] p-4 shadow-[0_32px_90px_rgba(40,56,105,0.28)] sm:p-6">
+                    <section
+                      aria-labelledby="score-modal-title"
+                      aria-modal="true"
+                      className="w-full animate-[modal-rise-in_0.38s_ease-out] rounded-[32px] border border-[rgba(255,255,255,0.74)] bg-[rgba(255,255,255,0.96)] p-4 shadow-[0_32px_90px_rgba(40,56,105,0.28)] sm:p-6"
+                      onClick={(event) => event.stopPropagation()}
+                      role="dialog"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="eyebrow">Score input</p>
                           <p className="mt-2 text-sm font-semibold text-[#5a5df0]">{matchLabel}</p>
-                          <h2 className="mt-1 text-2xl font-bold leading-tight text-[#1e2a4a]">
+                          <h2 className="mt-1 text-2xl font-bold leading-tight text-[#1e2a4a]" id="score-modal-title">
                             {left} <span className="text-[#8b94aa]">vs</span> {right}
                           </h2>
                         </div>
-                        <button className="btn-ghost shrink-0 px-4 py-2 text-sm" onClick={closeMatchModal} type="button">
-                          閉じる
+                        <button aria-label="結果入力画面を閉じる" className="modal-icon-close" onClick={closeMatchModal} type="button">
+                          <span aria-hidden="true">×</span>
                         </button>
                       </div>
 
@@ -1959,6 +2002,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                           <div key={gameIndex} className="grid grid-cols-[3.5rem_1fr_auto_1fr] items-center gap-2 sm:grid-cols-[5rem_1fr_auto_1fr]">
                             <span className="text-sm font-bold text-[#6f7b94]">G{gameIndex + 1}</span>
                             <input
+                              aria-label={`G${gameIndex + 1} ${left}の得点`}
                               className="input min-w-0 text-center text-lg font-bold"
                               disabled={!canSaveMatch || (match.locked && !canUseAdminTools)}
                               inputMode="numeric"
@@ -1968,6 +2012,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                             />
                             <span className="font-bold text-[#6f7b94]">-</span>
                             <input
+                              aria-label={`G${gameIndex + 1} ${right}の得点`}
                               className="input min-w-0 text-center text-lg font-bold"
                               disabled={!canSaveMatch || (match.locked && !canUseAdminTools)}
                               inputMode="numeric"
@@ -1991,7 +2036,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                       ) : null}
 
                       {message?.scope === "matches" ? (
-                        <p className={`mt-4 system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>{message.text}</p>
+                        <p aria-live="polite" className={`mt-4 system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`} role={message.tone === "error" ? "alert" : "status"}>{message.text}</p>
                       ) : null}
 
                       <div className="mt-4 grid gap-2 sm:grid-cols-2">

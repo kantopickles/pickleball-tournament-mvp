@@ -72,6 +72,20 @@ textarea::placeholder {
   color: #9aa6bf;
 }
 
+:where(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid rgba(90, 93, 240, 0.34);
+  outline-offset: 3px;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  touch-action: manipulation;
+}
+
 select option {
   background: #ffffff;
   color: #16213d;
@@ -1304,6 +1318,18 @@ select option {
       linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 255, 0.94)),
       rgba(255, 255, 255, 0.9);
     box-shadow: 0 16px 38px rgba(123, 141, 191, 0.1);
+    transition:
+      transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 220ms ease,
+      border-color 220ms ease;
+  }
+
+  @media (hover: hover) {
+    .tournament-card-light:hover {
+      transform: translateY(-3px);
+      border-color: rgba(90, 93, 240, 0.2);
+      box-shadow: 0 24px 52px rgba(99, 118, 175, 0.16);
+    }
   }
 
   .tournament-card-image-link {
@@ -1345,7 +1371,7 @@ select option {
   }
 
   .tournament-card-top {
-    @apply flex flex-col gap-3;
+    @apply flex items-start justify-between gap-3;
   }
 
   .tournament-card-top h3 {
@@ -1366,12 +1392,315 @@ select option {
   }
 
   .tournament-open-button {
+    @apply justify-between gap-3;
     min-height: 48px;
     margin-top: auto;
+    padding-left: 1.1rem;
+    padding-right: 1.1rem;
   }
 
   .tournament-delete-row {
     @apply grid gap-3;
+    padding: 0.9rem;
+    border-radius: 18px;
+    border: 1px solid rgba(232, 109, 109, 0.16);
+    background: rgba(255, 247, 247, 0.86);
+    animation: reveal-up 220ms ease-out both;
+  }
+
+  .tournament-card-menu-button,
+  .modal-icon-close {
+    display: inline-grid;
+    min-width: 44px;
+    min-height: 44px;
+    flex: 0 0 44px;
+    place-items: center;
+    border-radius: 14px;
+    border: 1px solid rgba(118, 135, 179, 0.14);
+    background: rgba(248, 250, 255, 0.9);
+    color: #74809a;
+    transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+  }
+
+  .tournament-card-menu-button svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .tournament-card-menu-button:hover {
+    border-color: rgba(232, 109, 109, 0.2);
+    background: rgba(255, 244, 244, 0.96);
+    color: #bf5b5b;
+  }
+
+  .modal-icon-close {
+    font-size: 1.6rem;
+    line-height: 1;
+    color: var(--muted-strong);
+  }
+
+  .list-count-badge {
+    @apply inline-flex w-fit items-center justify-center px-3 py-1.5 text-sm font-semibold;
+    border-radius: 999px;
+    border: 1px solid rgba(90, 93, 240, 0.12);
+    background: rgba(90, 93, 240, 0.07);
+    color: var(--brand);
+  }
+
+  .empty-state {
+    @apply flex flex-col items-start gap-4 p-5 sm:flex-row sm:items-center;
+    border-radius: 20px;
+    border: 1px dashed rgba(90, 93, 240, 0.24);
+    background: rgba(248, 250, 255, 0.78);
+  }
+
+  .empty-state-icon {
+    @apply grid h-12 w-12 shrink-0 place-items-center text-2xl font-light;
+    border-radius: 16px;
+    background: rgba(90, 93, 240, 0.09);
+    color: var(--brand);
+  }
+
+  .empty-state h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--text);
+  }
+
+  .empty-state p {
+    margin: 0.35rem 0 0;
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: var(--muted-strong);
+  }
+
+  .empty-state .btn-primary {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .tournament-card-skeleton {
+    @apply flex flex-col gap-4 p-5;
+    border-radius: 24px;
+    border: 1px solid rgba(114, 132, 181, 0.1);
+    background: rgba(255, 255, 255, 0.82);
+  }
+
+  .skeleton-image,
+  .skeleton-line,
+  .skeleton-button {
+    display: block;
+    border-radius: 14px;
+    background: linear-gradient(90deg, #eef2fb 25%, #f8faff 50%, #eef2fb 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  }
+
+  .skeleton-image {
+    aspect-ratio: 16 / 9;
+    margin: -20px -20px 0;
+    border-radius: 24px 24px 0 0;
+  }
+
+  .skeleton-line-title {
+    width: 72%;
+    height: 1.6rem;
+  }
+
+  .skeleton-line-meta {
+    width: 42%;
+    height: 0.9rem;
+  }
+
+  .skeleton-button {
+    height: 3rem;
+  }
+
+  .form-section-heading {
+    @apply flex items-center gap-3;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(114, 132, 181, 0.12);
+  }
+
+  .form-section-heading-spaced {
+    margin-top: 0.5rem;
+  }
+
+  .form-section-heading > span {
+    @apply grid h-8 w-8 shrink-0 place-items-center text-sm font-bold;
+    border-radius: 11px;
+    background: rgba(90, 93, 240, 0.1);
+    color: var(--brand);
+  }
+
+  .form-section-heading div {
+    @apply flex flex-col gap-0.5;
+  }
+
+  .form-section-heading strong {
+    font-size: 0.95rem;
+    color: var(--text);
+  }
+
+  .form-section-heading small {
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: var(--muted);
+  }
+
+  .access-page {
+    display: grid;
+    min-height: 100dvh;
+    align-items: center;
+  }
+
+  .access-page-wrap {
+    max-width: 680px;
+    gap: 1rem;
+  }
+
+  .access-back-link {
+    @apply inline-flex w-fit items-center gap-2 px-3 py-2 text-sm font-semibold;
+    border-radius: 14px;
+    color: var(--muted-strong);
+  }
+
+  .access-back-link:hover {
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--brand);
+  }
+
+  .access-card {
+    @apply p-5 sm:p-7;
+    border-radius: 24px;
+    border: 1px solid rgba(114, 132, 181, 0.14);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 28px 76px rgba(99, 118, 175, 0.16);
+    backdrop-filter: blur(24px);
+  }
+
+  .access-card-intro {
+    @apply flex items-start gap-4;
+  }
+
+  .access-card-icon {
+    @apply grid h-12 w-12 shrink-0 place-items-center;
+    border-radius: 16px;
+    background: rgba(90, 93, 240, 0.09);
+    color: var(--brand);
+  }
+
+  .access-card-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .access-card-intro h1 {
+    margin: 0.35rem 0 0;
+    font-size: 1.8rem;
+    line-height: 1.2;
+    color: var(--text);
+  }
+
+  .access-card-intro p:last-child {
+    margin: 0.65rem 0 0;
+    font-size: 0.92rem;
+    line-height: 1.7;
+    color: var(--muted-strong);
+  }
+
+  .access-form {
+    @apply mt-6 grid gap-4;
+  }
+
+  .access-role-switch {
+    @apply grid gap-2 sm:grid-cols-2;
+    padding: 0.35rem;
+    border-radius: 18px;
+    background: rgba(238, 243, 255, 0.8);
+  }
+
+  .access-role-button {
+    @apply flex min-h-[68px] items-center gap-3 px-4 py-3 text-left;
+    border-radius: 15px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted-strong);
+    transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
+  }
+
+  .access-role-button > span:first-child {
+    font-size: 1.25rem;
+    color: var(--brand);
+  }
+
+  .access-role-button > span:last-child {
+    @apply flex flex-col gap-0.5;
+  }
+
+  .access-role-button strong {
+    font-size: 0.95rem;
+  }
+
+  .access-role-button small {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--muted);
+  }
+
+  .access-role-button.is-active {
+    border-color: rgba(90, 93, 240, 0.14);
+    background: rgba(255, 255, 255, 0.98);
+    color: var(--text);
+    box-shadow: 0 10px 24px rgba(99, 118, 175, 0.12);
+  }
+
+  .access-actions {
+    @apply grid gap-2 sm:grid-cols-[1fr_auto];
+  }
+
+  .access-login-button {
+    min-height: 52px;
+  }
+
+  .access-restoring {
+    @apply mt-4 flex items-center gap-2 px-4 py-3 text-sm;
+    border-radius: 16px;
+    border: 1px solid rgba(90, 93, 240, 0.12);
+    background: rgba(90, 93, 240, 0.06);
+    color: #4a56b2;
+  }
+
+  .loading-spinner {
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    border: 2px solid rgba(90, 93, 240, 0.2);
+    border-top-color: var(--brand);
+    animation: loading-spin 700ms linear infinite;
+  }
+
+  .admin-settings-panel {
+    max-width: 980px;
+    width: 100%;
+  }
+
+  .admin-participant-form {
+    @apply grid gap-3;
+  }
+
+  .admin-section-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .admin-section-copy {
+    margin: 0.35rem 0 0;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--muted);
   }
 
   .flow-list {
@@ -1537,5 +1866,36 @@ select option {
     opacity: 0;
     transform: translateY(-6px) scale(0.985);
     filter: blur(3px);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }
