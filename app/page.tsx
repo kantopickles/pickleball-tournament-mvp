@@ -2,6 +2,7 @@
 
 import { FormEvent, PointerEvent as ReactPointerEvent, memo, startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { MAX_COVER_SOURCE_SIZE_MB, prepareCoverImage } from "@/lib/coverImage";
 import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
 import type { TournamentFormat } from "@/lib/types";
 
@@ -195,6 +196,7 @@ export default function HomePage() {
   const [matchGameCount, setMatchGameCount] = useState(1);
   const [originalCoverImageUrl, setOriginalCoverImageUrl] = useState<string | null>(null);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [isPreparingCoverImage, setIsPreparingCoverImage] = useState(false);
   const [coverZoom, setCoverZoom] = useState(1);
   const [coverOffsetX, setCoverOffsetX] = useState(50);
   const [coverOffsetY, setCoverOffsetY] = useState(50);
@@ -243,8 +245,8 @@ export default function HomePage() {
         return "大会を作れませんでした。入力内容を確認して、もう一度お試しください。";
       case "大会画像の読み込みに失敗しました。画像を選び直してください。":
         return "画像をうまく読み込めませんでした。別の画像でもう一度お試しください。";
-      case "画像は15MB以下にしてください。":
-        return "画像サイズが大きすぎます。15MB以下の画像を選んでください。";
+      case `画像は${MAX_COVER_SOURCE_SIZE_MB}MB以下にしてください。`:
+        return `画像サイズが大きすぎます。${MAX_COVER_SOURCE_SIZE_MB}MB以下の画像を選んでください。`;
       case "大会を削除できませんでした。":
         return "大会を削除できませんでした。作成用PINを確認して、もう一度お試しください。";
       case "削除するには作成用PINを入力してください。":
@@ -261,45 +263,36 @@ export default function HomePage() {
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      setMessage({
-        text: "画像ファイルを選んでください。",
-        tone: "error",
-        scope: "create"
-      });
-      return;
-    }
-
-    if (file.size > 15 * 1024 * 1024) {
-      setMessage({
-        text: "画像は15MB以下にしてください。",
-        tone: "error",
-        scope: "create"
-      });
-      return;
-    }
-
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result ?? ""));
-      reader.onerror = () => reject(new Error("read-error"));
-      reader.readAsDataURL(file);
-    }).catch(() => "");
-
-    if (!dataUrl) {
-      setMessage({
-        text: "画像をうまく読み込めませんでした。別の画像でもう一度お試しください。",
-        tone: "error",
-        scope: "create"
-      });
-      return;
-    }
-
-    setOriginalCoverImageUrl(dataUrl);
-    setCoverZoom(1);
-    setCoverOffsetX(50);
-    setCoverOffsetY(50);
+    setIsPreparingCoverImage(true);
     setMessage(null);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    try {
+      const preparedImage = await prepareCoverImage(file);
+      setOriginalCoverImageUrl(preparedImage.dataUrl);
+      setCoverZoom(1);
+      setCoverOffsetX(50);
+      setCoverOffsetY(50);
+      setMessage(
+        preparedImage.wasCompressed
+          ? { text: "大きな画像を自動で圧縮しました。表示範囲を調整してください。", tone: "success", scope: "create" }
+          : null
+      );
+    } catch (error) {
+      const errorCode = error instanceof Error ? error.message : "decode-error";
+      setMessage({
+        text:
+          errorCode === "invalid-type"
+            ? "画像ファイルを選んでください。"
+            : errorCode === "too-large"
+              ? `画像は${MAX_COVER_SOURCE_SIZE_MB}MB以下にしてください。`
+              : "画像をうまく読み込めませんでした。別の画像でもう一度お試しください。",
+        tone: "error",
+        scope: "create"
+      });
+    } finally {
+      setIsPreparingCoverImage(false);
+    }
   }
 
   useEffect(() => {
@@ -860,7 +853,11 @@ export default function HomePage() {
                       写真を撮る
                     </button>
                   </div>
-                  <span className="text-sm text-[#6f7b94]">任意設定です。15MB以下まで選べて、表示用に自動で調整されます。</span>
+                  <span className="text-sm text-[#6f7b94]">
+                    {isPreparingCoverImage
+                      ? "画像を自動調整しています..."
+                      : `${MAX_COVER_SOURCE_SIZE_MB}MBまで選択でき、大きな画像は自動で圧縮します。`}
+                  </span>
                 </label>
 
                 <div className="sub-panel sub-panel-premium">

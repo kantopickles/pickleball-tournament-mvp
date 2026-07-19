@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, PointerEvent as ReactPointerEvent, startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { MAX_COVER_SOURCE_SIZE_MB, prepareCoverImage } from "@/lib/coverImage";
 import { effectiveScheduleStatus } from "@/lib/schedule";
 import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
 import type { Match, PublicParticipant, TournamentFormat, TournamentSnapshot } from "@/lib/types";
@@ -77,6 +78,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const [scheduleDropTarget, setScheduleDropTarget] = useState<ScheduleDropTarget | null>(null);
   const [originalCoverImageUrl, setOriginalCoverImageUrl] = useState<string | null>(null);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [isPreparingCoverImage, setIsPreparingCoverImage] = useState(false);
   const [coverZoom, setCoverZoom] = useState(1);
   const [coverOffsetX, setCoverOffsetX] = useState(50);
   const [coverOffsetY, setCoverOffsetY] = useState(50);
@@ -446,33 +448,34 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   async function handleCoverImageChange(file: File | null) {
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      showMessage("admin", "error", "画像ファイルを選んでください。", "画像を選んでください。");
-      return;
-    }
-
-    if (file.size > 15 * 1024 * 1024) {
-      showMessage("admin", "error", "画像は15MB以下にしてください。", "画像サイズが大きすぎます。");
-      return;
-    }
-
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result ?? ""));
-      reader.onerror = () => reject(new Error("read-error"));
-      reader.readAsDataURL(file);
-    }).catch(() => "");
-
-    if (!dataUrl) {
-      showMessage("admin", "error", "画像をうまく読み込めませんでした。別の画像でもう一度お試しください。", "画像を読み込めませんでした。");
-      return;
-    }
-
-    setOriginalCoverImageUrl(dataUrl);
-    setCoverZoom(1);
-    setCoverOffsetX(50);
-    setCoverOffsetY(50);
+    setIsPreparingCoverImage(true);
     setMessage(null);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    try {
+      const preparedImage = await prepareCoverImage(file);
+      setOriginalCoverImageUrl(preparedImage.dataUrl);
+      setCoverZoom(1);
+      setCoverOffsetX(50);
+      setCoverOffsetY(50);
+      if (preparedImage.wasCompressed) {
+        showMessage("admin", "success", "大きな画像を自動で圧縮しました。表示範囲を調整してください。", "");
+      }
+    } catch (error) {
+      const errorCode = error instanceof Error ? error.message : "decode-error";
+      showMessage(
+        "admin",
+        "error",
+        errorCode === "invalid-type"
+          ? "画像ファイルを選んでください。"
+          : errorCode === "too-large"
+            ? `画像は${MAX_COVER_SOURCE_SIZE_MB}MB以下にしてください。`
+            : "画像をうまく読み込めませんでした。別の画像でもう一度お試しください。",
+        "画像を読み込めませんでした。"
+      );
+    } finally {
+      setIsPreparingCoverImage(false);
+    }
   }
 
   async function unlockTournamentAccess(event: FormEvent<HTMLFormElement>) {
@@ -1272,7 +1275,11 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                         写真を撮る
                       </button>
                     </div>
-                    <span className="text-sm text-[#6f7b94]">15MB以下の画像を設定できます。調整後に更新すると大会ページへ反映されます。</span>
+                    <span className="text-sm text-[#6f7b94]">
+                      {isPreparingCoverImage
+                        ? "画像を自動調整しています..."
+                        : `${MAX_COVER_SOURCE_SIZE_MB}MBまで選択でき、大きな画像は自動で圧縮します。調整後に更新すると大会ページへ反映されます。`}
+                    </span>
                   </label>
 
                   {originalCoverImageUrl ? (
