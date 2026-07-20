@@ -69,6 +69,7 @@ const HomeTopBar = memo(function HomeTopBar({ onOpenCreateModal }: { onOpenCreat
         <button className="topnav-button" onClick={onOpenCreateModal} type="button">
           大会を作成
         </button>
+        <a href="/simulator">進行シミュレーター</a>
       </nav>
     </header>
   );
@@ -452,6 +453,15 @@ export default function HomePage() {
       createModalTriggerRef.current?.focus();
     }, 260);
   }, [isCreateModalClosing, isCreateModalSubmitting, isCreateModalVisible, isSaving]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("create") !== "1") return;
+    openCreateModal();
+    params.delete("create");
+    const query = params.toString();
+    window.history.replaceState({}, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+  }, [openCreateModal]);
 
   function openDeletePrompt(slug: string) {
     setMessage((current) => (current?.scope === "list" ? null : current));

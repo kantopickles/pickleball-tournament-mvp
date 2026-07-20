@@ -1885,6 +1885,773 @@ select option {
   }
 }
 
+/* Progress simulator */
+.simulator-page {
+  min-height: 100dvh;
+  padding-bottom: 4rem;
+}
+
+.simulator-page-wrap {
+  max-width: 1380px;
+  gap: 1.4rem;
+}
+
+.simulator-nav-current {
+  color: var(--brand);
+}
+
+.simulator-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 2.5rem 0.4rem 1rem;
+}
+
+.simulator-intro h1 {
+  max-width: 820px;
+  margin: 0.55rem 0 0;
+  font-size: clamp(2.3rem, 5vw, 4.7rem);
+  line-height: 1.03;
+  letter-spacing: -0.045em;
+  color: var(--text);
+}
+
+.simulator-intro p:last-child {
+  max-width: 680px;
+  margin: 1rem 0 0;
+  font-size: 1rem;
+  line-height: 1.8;
+  color: var(--muted-strong);
+}
+
+.simulator-reset,
+.simulator-add-event {
+  flex: 0 0 auto;
+  gap: 0.55rem;
+}
+
+.simulator-reset svg,
+.simulator-add-event svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.simulator-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.simulator-stat {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1.25rem;
+  border: 1px solid rgba(114, 132, 181, 0.14);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 16px 38px rgba(102, 119, 170, 0.1);
+  backdrop-filter: blur(20px);
+}
+
+.simulator-stat-icon {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 16px;
+  background: rgba(90, 93, 240, 0.1);
+  color: var(--brand);
+}
+
+.simulator-stat-icon-green {
+  background: rgba(52, 191, 132, 0.11);
+  color: #249e6b;
+}
+
+.simulator-stat-icon-gold {
+  background: rgba(241, 184, 75, 0.14);
+  color: #c78c19;
+}
+
+.simulator-stat-icon-purple {
+  background: rgba(150, 101, 238, 0.1);
+  color: #7d54cc;
+}
+
+.simulator-stat-icon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.simulator-stat > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.simulator-stat strong {
+  font-size: clamp(1.7rem, 3vw, 2.35rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.simulator-stat strong small {
+  margin-left: 0.18rem;
+  font-size: 0.84rem;
+  letter-spacing: 0;
+  color: var(--muted-strong);
+}
+
+.simulator-stat > div > span {
+  margin-top: 0.42rem;
+  overflow: hidden;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.simulator-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.75fr) minmax(270px, 0.65fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.simulator-venue-panel,
+.simulator-guide-panel,
+.simulator-event-card,
+.simulator-overview-panel {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.simulator-section-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+
+.simulator-step {
+  display: grid;
+  width: 2.3rem;
+  height: 2.3rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 13px;
+  background: linear-gradient(180deg, #686eff, #5659ed);
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 700;
+  box-shadow: 0 10px 22px rgba(90, 93, 240, 0.18);
+}
+
+.simulator-section-heading .eyebrow,
+.simulator-guide-panel .eyebrow {
+  margin: 0;
+  font-size: 0.66rem;
+}
+
+.simulator-section-heading h2,
+.simulator-guide-panel h2 {
+  margin: 0.18rem 0 0;
+  font-size: 1.3rem;
+  line-height: 1.2;
+}
+
+.simulator-section-heading > div > p:last-child {
+  margin: 0.45rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.simulator-field-grid {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1.35rem;
+}
+
+.simulator-field-grid-venue {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.simulator-field-grid .field {
+  position: relative;
+  min-width: 0;
+  font-size: 0.77rem;
+}
+
+.simulator-field-grid .input {
+  min-height: 48px;
+  padding: 0.75rem 0.85rem;
+  border-radius: 15px;
+  font-size: 0.9rem;
+}
+
+.simulator-input-unit {
+  position: absolute;
+  right: 0.85rem;
+  bottom: 0.8rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  pointer-events: none;
+}
+
+.simulator-field-grid input[type="number"] {
+  padding-right: 2.5rem;
+}
+
+.simulator-timeline {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px solid rgba(105, 123, 177, 0.12);
+  border-radius: 18px;
+  background: rgba(246, 248, 255, 0.78);
+}
+
+.simulator-timeline-head {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-bottom: 0.65rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.simulator-timeline-head strong {
+  color: var(--muted-strong);
+}
+
+.simulator-timeline-head span:last-child {
+  text-align: right;
+}
+
+.simulator-timeline-bar {
+  display: flex;
+  min-height: 42px;
+  overflow: hidden;
+  border-radius: 13px;
+  background: #edf1fb;
+}
+
+.simulator-timeline-bar span {
+  display: grid;
+  min-width: 7px;
+  place-items: center;
+  overflow: hidden;
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.simulator-timeline-bar .is-reception { background: #e7e9ff; color: #555bc8; }
+.simulator-timeline-bar .is-warmup { background: #dff4eb; color: #27865f; }
+.simulator-timeline-bar .is-ceremony { background: #fff0d1; color: #9d6d12; }
+.simulator-timeline-bar .is-matches { background: linear-gradient(90deg, #686eff, #5659ed); color: #fff; }
+.simulator-timeline-bar .is-cleanup { background: #e8edf7; color: #68748c; }
+
+.simulator-guide-panel {
+  position: sticky;
+  top: 1rem;
+}
+
+.simulator-guide-panel dl {
+  display: grid;
+  gap: 0;
+  margin: 1.1rem 0 0;
+}
+
+.simulator-guide-panel dl div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.72rem 0;
+  border-bottom: 1px solid rgba(105, 123, 177, 0.11);
+}
+
+.simulator-guide-panel dt {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.simulator-guide-panel dd {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.simulator-alert {
+  margin: 1rem 0 0;
+  padding: 0.8rem 0.9rem;
+  border-radius: 14px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.simulator-alert-success {
+  border: 1px solid rgba(52, 191, 132, 0.17);
+  background: rgba(52, 191, 132, 0.08);
+  color: #287a5a;
+}
+
+.simulator-alert-error {
+  border: 1px solid rgba(232, 109, 109, 0.17);
+  background: rgba(232, 109, 109, 0.08);
+  color: #ad5555;
+}
+
+.simulator-events-section {
+  margin-top: 0.35rem;
+}
+
+.simulator-events-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.6rem 0.4rem;
+}
+
+.simulator-event-list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.7rem;
+}
+
+.simulator-event-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.simulator-event-titlebar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(105, 123, 177, 0.12);
+  background: rgba(248, 250, 255, 0.84);
+}
+
+.simulator-event-index {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--brand);
+}
+
+.simulator-event-name .input {
+  min-height: 40px;
+  padding: 0.45rem 0.7rem;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.simulator-event-name .input:focus {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 3px rgba(90, 93, 240, 0.08);
+}
+
+.simulator-remove-event {
+  padding: 0.45rem 0.65rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #bf5b5b;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.simulator-remove-event:hover {
+  background: var(--danger-soft);
+}
+
+.simulator-event-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.65fr);
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.simulator-event-fields {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-content: start;
+}
+
+.simulator-event-fields .field {
+  position: relative;
+  min-width: 0;
+  font-size: 0.72rem;
+}
+
+.simulator-event-fields .input {
+  min-height: 45px;
+  padding: 0.68rem 0.75rem;
+  border-radius: 14px;
+  font-size: 0.84rem;
+}
+
+.simulator-manual-field {
+  grid-column: span 2;
+}
+
+.simulator-event-result {
+  padding: 1rem;
+  border: 1px solid rgba(52, 191, 132, 0.15);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(239, 251, 247, 0.92), rgba(249, 252, 255, 0.92));
+}
+
+.simulator-event-result.is-over {
+  border-color: rgba(232, 109, 109, 0.17);
+  background: linear-gradient(145deg, rgba(255, 245, 245, 0.92), rgba(249, 252, 255, 0.92));
+}
+
+.simulator-capacity {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid rgba(105, 123, 177, 0.11);
+}
+
+.simulator-capacity > span {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.simulator-capacity strong {
+  font-size: 2.4rem;
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+}
+
+.simulator-capacity strong small {
+  margin-left: 0.2rem;
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  color: var(--muted-strong);
+}
+
+.simulator-result-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.simulator-result-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.simulator-result-grid span {
+  font-size: 0.66rem;
+  color: var(--muted);
+}
+
+.simulator-result-grid strong {
+  font-size: 0.9rem;
+}
+
+.simulator-result-status {
+  margin: 0.9rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(52, 191, 132, 0.1);
+  color: #287a5a;
+  font-size: 0.73rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.is-over .simulator-result-status {
+  background: rgba(232, 109, 109, 0.1);
+  color: #ad5555;
+}
+
+.simulator-result-note {
+  margin: 0.7rem 0 0;
+  font-size: 0.66rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.simulator-result-warning {
+  color: #ad5555;
+}
+
+.simulator-overview-panel {
+  margin-top: 0.35rem;
+}
+
+.simulator-event-timeline {
+  margin-top: 1.2rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(105, 123, 177, 0.11);
+  border-radius: 18px;
+  background: rgba(247, 249, 255, 0.78);
+}
+
+.simulator-event-timeline-scale {
+  display: flex;
+  justify-content: space-between;
+  padding-left: 9.5rem;
+  font-size: 0.66rem;
+  color: var(--muted);
+}
+
+.simulator-event-timeline-row {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.simulator-event-timeline-row > strong {
+  overflow: hidden;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.simulator-event-track {
+  position: relative;
+  height: 2.2rem;
+  overflow: hidden;
+  border-radius: 10px;
+  background: repeating-linear-gradient(90deg, rgba(105, 123, 177, 0.06) 0, rgba(105, 123, 177, 0.06) 1px, transparent 1px, transparent 25%);
+}
+
+.simulator-event-track span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  min-width: 4px;
+  overflow: hidden;
+  padding: 0 0.7rem;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #686eff, #5659ed);
+  box-shadow: 0 8px 18px rgba(90, 93, 240, 0.18);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .simulator-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .simulator-layout,
+  .simulator-event-content {
+    grid-template-columns: 1fr;
+  }
+
+  .simulator-guide-panel {
+    position: static;
+  }
+
+  .simulator-event-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .simulator-page {
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+  }
+
+  .simulator-topbar {
+    gap: 0.75rem;
+    padding: 0.8rem;
+    border-radius: 20px;
+  }
+
+  .simulator-topbar .brand-lockup {
+    font-size: 1rem;
+  }
+
+  .simulator-topbar .brand-mark {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 12px;
+  }
+
+  .simulator-topbar .topnav-links {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-radius: 13px;
+    background: rgba(239, 243, 253, 0.8);
+    font-size: 0.65rem;
+    text-align: center;
+  }
+
+  .simulator-topbar .topnav-links a {
+    display: grid;
+    min-height: 38px;
+    place-items: center;
+    padding: 0.35rem;
+    border-radius: 10px;
+  }
+
+  .simulator-topbar .topnav-links .simulator-nav-current {
+    background: #fff;
+    box-shadow: 0 6px 16px rgba(99, 118, 175, 0.1);
+  }
+
+  .simulator-intro {
+    display: block;
+    padding: 1.5rem 0.15rem 0.4rem;
+  }
+
+  .simulator-intro h1 {
+    font-size: 2.35rem;
+    line-height: 1.08;
+  }
+
+  .simulator-intro p:last-child {
+    margin-top: 0.75rem;
+    font-size: 0.84rem;
+    line-height: 1.7;
+  }
+
+  .simulator-reset {
+    width: 100%;
+    margin-top: 1rem;
+    min-height: 46px;
+  }
+
+  .simulator-summary {
+    gap: 0.55rem;
+  }
+
+  .simulator-stat {
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.85rem;
+    border-radius: 17px;
+  }
+
+  .simulator-stat-icon {
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 12px;
+  }
+
+  .simulator-stat-icon svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .simulator-stat strong {
+    font-size: 1.55rem;
+  }
+
+  .simulator-stat > div > span {
+    font-size: 0.64rem;
+    white-space: normal;
+  }
+
+  .simulator-venue-panel,
+  .simulator-guide-panel,
+  .simulator-overview-panel {
+    padding: 1rem;
+    border-radius: 20px;
+  }
+
+  .simulator-field-grid-venue,
+  .simulator-event-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .simulator-manual-field {
+    grid-column: 1 / -1;
+  }
+
+  .simulator-timeline {
+    margin-right: -0.2rem;
+    margin-left: -0.2rem;
+    padding: 0.7rem;
+  }
+
+  .simulator-timeline-head {
+    grid-template-columns: auto 1fr auto;
+    gap: 0.5rem;
+    font-size: 0.6rem;
+  }
+
+  .simulator-timeline-head strong {
+    text-align: center;
+  }
+
+  .simulator-timeline-bar span {
+    font-size: 0;
+  }
+
+  .simulator-timeline-bar .is-matches {
+    font-size: 0.62rem;
+  }
+
+  .simulator-events-header {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .simulator-add-event {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .simulator-event-titlebar {
+    padding: 0.7rem;
+  }
+
+  .simulator-event-content {
+    padding: 0.75rem;
+  }
+
+  .simulator-event-result {
+    padding: 0.85rem;
+  }
+
+  .simulator-event-timeline {
+    padding: 0.65rem;
+  }
+
+  .simulator-event-timeline-scale {
+    padding-left: 0;
+  }
+
+  .simulator-event-timeline-row {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
