@@ -17,7 +17,16 @@ type SimulationEvent = {
   matchMinutes: number;
   turnoverMinutes: number;
   blockCount: number;
+  leaguePlayoffGroupSize: number;
+  leaguePlayoffMaxRank: string;
   manualMatches: string;
+};
+
+type LeaguePlayoffGroup = {
+  label: string;
+  entrants: number;
+  matches: number;
+  roundMatches: number[];
 };
 
 type VenueSettings = {
@@ -64,6 +73,8 @@ const initialEvents: SimulationEvent[] = [
     matchMinutes: 15,
     turnoverMinutes: 3,
     blockCount: 2,
+    leaguePlayoffGroupSize: 1,
+    leaguePlayoffMaxRank: "",
     manualMatches: ""
   },
   {
@@ -78,6 +89,8 @@ const initialEvents: SimulationEvent[] = [
     matchMinutes: 20,
     turnoverMinutes: 5,
     blockCount: 2,
+    leaguePlayoffGroupSize: 1,
+    leaguePlayoffMaxRank: "",
     manualMatches: ""
   }
 ];
@@ -103,43 +116,126 @@ function formatDuration(totalMinutes: number) {
   return `${hours}時間${minutes}分`;
 }
 
-function balancedLeagueMatches(entrants: number, blockCount: number) {
+function balancedLeagueBlockSizes(entrants: number, blockCount: number) {
   const blocks = Math.max(1, Math.min(blockCount, entrants));
   const baseSize = Math.floor(entrants / blocks);
   const remainder = entrants % blocks;
 
-  return Array.from({ length: blocks }, (_, index) => baseSize + (index < remainder ? 1 : 0))
-    .reduce((sum, size) => sum + (size * (size - 1)) / 2, 0);
+  return Array.from({ length: blocks }, (_, index) => baseSize + (index < remainder ? 1 : 0));
 }
 
-function automaticMatchCount(format: EventFormat, entrants: number, blockCount: number) {
-  if (entrants < 2) return 0;
-  if (format === "round_robin") return (entrants * (entrants - 1)) / 2;
-  if (format === "tournament") return entrants - 1;
-  return balancedLeagueMatches(entrants, blockCount);
-}
-
-function requiredCourtRounds(format: EventFormat, entrants: number, blockCount: number, courts: number) {
-  if (entrants < 2) return 0;
-  if (format !== "tournament") {
-    return Math.ceil(automaticMatchCount(format, entrants, blockCount) / Math.max(1, courts));
-  }
-
+function tournamentRoundMatches(entrants: number) {
+  const rounds: number[] = [];
   let activeEntrants = entrants;
-  let courtRounds = 0;
   while (activeEntrants > 1) {
     const matchesInRound = Math.floor(activeEntrants / 2);
     const byes = activeEntrants % 2;
-    courtRounds += Math.ceil(matchesInRound / Math.max(1, courts));
+    rounds.push(matchesInRound);
     activeEntrants = matchesInRound + byes;
   }
-  return courtRounds;
+  return rounds;
 }
 
-function maximumEntrants(format: EventFormat, duration: number, courts: number, slotMinutes: number, blockCount: number) {
+function formatRankRange(fromRank: number, toRank: number) {
+  if (fromRank === toRank) return `${fromRank}位トーナメント`;
+  if (toRank === fromRank + 1) return `${fromRank}・${toRank}位トーナメント`;
+  return `${fromRank}〜${toRank}位トーナメント`;
+}
+
+function calculateLeaguePlan(
+  entrants: number,
+  blockCount: number,
+  playoffGroupSize: number,
+  playoffMaxRank: string
+) {
+  const blockSizes = balancedLeagueBlockSizes(entrants, blockCount);
+  const preliminaryMatches = blockSizes.reduce((sum, size) => sum + (size * (size - 1)) / 2, 0);
+  const largestBlockSize = Math.max(0, ...blockSizes);
+  const requestedMaxRank = playoffMaxRank === "" ? largestBlockSize : clampNumber(Number(playoffMaxRank), 1, largestBlockSize || 1);
+  const maxRank = Math.min(largestBlockSize, requestedMaxRank);
+  const safeGroupSize = clampNumber(playoffGroupSize, 1, 8);
+  const playoffGroups: LeaguePlayoffGroup[] = [];
+
+  for (let fromRank = 1; fromRank <= maxRank; fromRank += safeGroupSize) {
+    const toRank = Math.min(maxRank, fromRank + safeGroupSize - 1);
+    const groupEntrants = blockSizes.reduce((sum, blockSize) => {
+      const availableRanks = Math.max(0, Math.min(blockSize, toRank) - fromRank + 1);
+      return sum + availableRanks;
+    }, 0);
+    if (groupEntrants < 2) continue;
+    const roundMatches = tournamentRoundMatches(groupEntrants);
+    playoffGroups.push({
+      label: formatRankRange(fromRank, toRank),
+      entrants: groupEntrants,
+      matches: roundMatches.reduce((sum, matches) => sum + matches, 0),
+      roundMatches
+    });
+  }
+
+  const playoffMatches = playoffGroups.reduce((sum, group) => sum + group.matches, 0);
+  return {
+    blockSizes,
+    preliminaryMatches,
+    playoffGroups,
+    playoffMatches,
+    totalMatches: preliminaryMatches + playoffMatches
+  };
+}
+
+function automaticMatchCount(
+  format: EventFormat,
+  entrants: number,
+  blockCount: number,
+  playoffGroupSize: number,
+  playoffMaxRank: string
+) {
+  if (entrants < 2) return 0;
+  if (format === "round_robin") return (entrants * (entrants - 1)) / 2;
+  if (format === "tournament") return entrants - 1;
+  return calculateLeaguePlan(entrants, blockCount, playoffGroupSize, playoffMaxRank).totalMatches;
+}
+
+function requiredCourtRounds(
+  format: EventFormat,
+  entrants: number,
+  blockCount: number,
+  courts: number,
+  playoffGroupSize: number,
+  playoffMaxRank: string
+) {
+  if (entrants < 2) return 0;
+  if (format === "round_robin") {
+    return Math.ceil(automaticMatchCount(format, entrants, blockCount, playoffGroupSize, playoffMaxRank) / Math.max(1, courts));
+  }
+
+  if (format === "league") {
+    const plan = calculateLeaguePlan(entrants, blockCount, playoffGroupSize, playoffMaxRank);
+    const preliminaryRounds = Math.ceil(plan.preliminaryMatches / Math.max(1, courts));
+    const playoffDepth = Math.max(0, ...plan.playoffGroups.map((group) => group.roundMatches.length));
+    let playoffRounds = 0;
+    for (let roundIndex = 0; roundIndex < playoffDepth; roundIndex += 1) {
+      const matchesInRound = plan.playoffGroups.reduce((sum, group) => sum + (group.roundMatches[roundIndex] ?? 0), 0);
+      playoffRounds += Math.ceil(matchesInRound / Math.max(1, courts));
+    }
+    return preliminaryRounds + playoffRounds;
+  }
+
+  return tournamentRoundMatches(entrants)
+    .reduce((sum, matchesInRound) => sum + Math.ceil(matchesInRound / Math.max(1, courts)), 0);
+}
+
+function maximumEntrants(
+  format: EventFormat,
+  duration: number,
+  courts: number,
+  slotMinutes: number,
+  blockCount: number,
+  playoffGroupSize: number,
+  playoffMaxRank: string
+) {
   let maximum = 1;
   for (let entrants = 2; entrants <= 128; entrants += 1) {
-    const requiredMinutes = requiredCourtRounds(format, entrants, blockCount, courts) * slotMinutes;
+    const requiredMinutes = requiredCourtRounds(format, entrants, blockCount, courts, playoffGroupSize, playoffMaxRank) * slotMinutes;
     if (requiredMinutes <= duration) maximum = entrants;
   }
   return maximum;
@@ -163,6 +259,8 @@ function createEvent(index: number, matchStart: string, matchEnd: string): Simul
     matchMinutes: 15,
     turnoverMinutes: 3,
     blockCount: 2,
+    leaguePlayoffGroupSize: 1,
+    leaguePlayoffMaxRank: "",
     manualMatches: ""
   };
 }
@@ -205,13 +303,37 @@ export function ProgressSimulator() {
     const duration = Math.max(0, end - start);
     const slotMinutes = Math.max(1, event.matchMinutes + event.turnoverMinutes);
     const matchSlots = Math.floor(duration / slotMinutes) * event.courts;
-    const automaticMatches = automaticMatchCount(event.format, event.entrants, event.blockCount);
+    const leaguePlan = event.format === "league"
+      ? calculateLeaguePlan(event.entrants, event.blockCount, event.leaguePlayoffGroupSize, event.leaguePlayoffMaxRank)
+      : null;
+    const automaticMatches = automaticMatchCount(
+      event.format,
+      event.entrants,
+      event.blockCount,
+      event.leaguePlayoffGroupSize,
+      event.leaguePlayoffMaxRank
+    );
     const manualMatchOverride = event.manualMatches === "" ? null : clampNumber(Number(event.manualMatches), 0);
     const requiredMatches = manualMatchOverride ?? automaticMatches;
-    const maxEntrants = maximumEntrants(event.format, duration, event.courts, slotMinutes, event.blockCount);
+    const maxEntrants = maximumEntrants(
+      event.format,
+      duration,
+      event.courts,
+      slotMinutes,
+      event.blockCount,
+      event.leaguePlayoffGroupSize,
+      event.leaguePlayoffMaxRank
+    );
     const remainingSlots = matchSlots - requiredMatches;
     const requiredRounds = manualMatchOverride === null
-      ? requiredCourtRounds(event.format, event.entrants, event.blockCount, event.courts)
+      ? requiredCourtRounds(
+          event.format,
+          event.entrants,
+          event.blockCount,
+          event.courts,
+          event.leaguePlayoffGroupSize,
+          event.leaguePlayoffMaxRank
+        )
       : Math.ceil(requiredMatches / Math.max(1, event.courts));
     const requiredMinutes = requiredRounds * slotMinutes;
     const estimatedFinish = start + requiredMinutes;
@@ -226,6 +348,7 @@ export function ProgressSimulator() {
       slotMinutes,
       matchSlots,
       automaticMatches,
+      leaguePlan,
       manualMatchOverride,
       requiredMatches,
       maxEntrants,
@@ -295,7 +418,7 @@ export function ProgressSimulator() {
         <section className="simulator-intro">
           <div>
             <p className="eyebrow">SCHEDULE SIMULATOR</p>
-            <h1>借りた時間で、何試合できるか。</h1>
+            <h1>進行シミュレーター</h1>
             <p>準備から撤収までを含めて、種目ごとの試合数と参加定員をすぐに試算できます。</p>
           </div>
           <button className="btn-ghost simulator-reset" onClick={resetSimulator} type="button">
@@ -402,7 +525,18 @@ export function ProgressSimulator() {
                     <label className="field">参加単位<select className="input" value={event.unit} onChange={(changeEvent) => updateEvent(event.id, "unit", changeEvent.target.value as EventUnit)}><option value="pairs">組</option><option value="teams">チーム</option></select></label>
                     <label className="field">大会形式<select className="input" value={event.format} onChange={(changeEvent) => updateEvent(event.id, "format", changeEvent.target.value as EventFormat)}><option value="round_robin">総当たり</option><option value="league">リーグ戦</option><option value="tournament">トーナメント</option></select></label>
                     <label className="field">予定数<input className="input" min="2" max="128" type="number" value={event.entrants} onChange={(changeEvent) => updateEvent(event.id, "entrants", clampNumber(Number(changeEvent.target.value), 2, 128))} /><span className="simulator-input-unit">{unitLabels[event.unit]}</span></label>
-                    {event.format === "league" && <label className="field">ブロック数<input className="input" min="2" max="16" type="number" value={event.blockCount} onChange={(changeEvent) => updateEvent(event.id, "blockCount", clampNumber(Number(changeEvent.target.value), 2, 16))} /></label>}
+                    {event.format === "league" && <>
+                      <label className="field">ブロック数<input className="input" min="2" max="16" type="number" value={event.blockCount} onChange={(changeEvent) => updateEvent(event.id, "blockCount", clampNumber(Number(changeEvent.target.value), 2, 16))} /></label>
+                      <label className="field">順位別Tのまとめ方
+                        <select className="input" value={event.leaguePlayoffGroupSize} onChange={(changeEvent) => updateEvent(event.id, "leaguePlayoffGroupSize", clampNumber(Number(changeEvent.target.value), 1, 4))}>
+                          <option value="1">各順位ごと</option>
+                          <option value="2">2順位ずつ</option>
+                          <option value="3">3順位ずつ</option>
+                          <option value="4">4順位ずつ</option>
+                        </select>
+                      </label>
+                      <label className="field">何位まで実施<input className="input" min="1" max={event.entrants} placeholder="全順位" type="number" value={event.leaguePlayoffMaxRank} onChange={(changeEvent) => updateEvent(event.id, "leaguePlayoffMaxRank", changeEvent.target.value.replace(/\D/g, ""))} /></label>
+                    </>}
                     <label className="field">使用コート<input className="input" min="1" max={venue.courts} type="number" value={event.courts} onChange={(changeEvent) => updateEvent(event.id, "courts", clampNumber(Number(changeEvent.target.value), 1, 30))} /><span className="simulator-input-unit">面</span></label>
                     <label className="field">種目開始<input className="input" type="time" value={event.startTime} onChange={(changeEvent) => updateEvent(event.id, "startTime", changeEvent.target.value)} /></label>
                     <label className="field">種目終了<input className="input" type="time" value={event.endTime} onChange={(changeEvent) => updateEvent(event.id, "endTime", changeEvent.target.value)} /></label>
@@ -422,6 +556,17 @@ export function ProgressSimulator() {
                       <div><span>終了見込み</span><strong>{toTime(event.estimatedFinish)}</strong></div>
                       <div><span>{event.remainingSlots >= 0 ? "余裕" : "不足"}</span><strong>{Math.abs(event.remainingSlots)}試合</strong></div>
                     </div>
+                    {event.leaguePlan && <div className="simulator-league-plan">
+                      <div className="simulator-league-counts">
+                        <span>ブロック内総当たり <strong>{event.leaguePlan.preliminaryMatches}試合</strong></span>
+                        <span>順位別トーナメント <strong>{event.leaguePlan.playoffMatches}試合</strong></span>
+                      </div>
+                      <div className="simulator-league-groups" aria-label="作成される順位別トーナメント">
+                        {event.leaguePlan.playoffGroups.map((group) => (
+                          <span key={group.label}>{group.label}（{group.entrants}{unitLabels[event.unit]}・{group.matches}試合）</span>
+                        ))}
+                      </div>
+                    </div>}
                     <p className="simulator-result-status">{event.fits
                       ? "この設定で開催できます"
                       : event.remainingSlots < 0
@@ -429,7 +574,7 @@ export function ProgressSimulator() {
                         : `勝ち上がりを待つ時間を含めると、あと ${event.overtimeMinutes} 分必要です`}</p>
                     {event.manualMatchOverride !== null && <p className="simulator-result-note">自動計算では {event.automaticMatches} 試合です。現在は手動指定を使っています。</p>}
                     {event.outsideVenue && <p className="simulator-result-note simulator-result-warning">種目時間が会場の試合可能時間からはみ出しています。</p>}
-                    {event.format === "league" && <p className="simulator-result-note">リーグ戦はブロック内の総当たり試合で計算しています。決勝戦などを加える場合は手動指定を使えます。</p>}
+                    {event.format === "league" && <p className="simulator-result-note">ブロック内の総当たり後に、上記の順位別トーナメントを行う前提で計算しています。「2順位ずつ」なら1・2位、3・4位をそれぞれ混ぜたトーナメントになります。</p>}
                   </div>
                 </div>
               </article>

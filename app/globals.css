@@ -2368,6 +2368,48 @@ select option {
   font-size: 0.9rem;
 }
 
+.simulator-league-plan {
+  margin-top: 0.9rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(105, 123, 177, 0.11);
+}
+
+.simulator-league-counts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.simulator-league-counts > span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  font-size: 0.64rem;
+  color: var(--muted);
+}
+
+.simulator-league-counts strong {
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.simulator-league-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+  margin-top: 0.65rem;
+}
+
+.simulator-league-groups > span {
+  padding: 0.34rem 0.52rem;
+  border-radius: 999px;
+  background: rgba(90, 93, 240, 0.08);
+  color: #555bc8;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .simulator-result-status {
   margin: 0.9rem 0 0;
   padding: 0.65rem 0.75rem;
