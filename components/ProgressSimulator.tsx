@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type EventUnit = "pairs" | "teams";
 type EventFormat = "round_robin" | "league" | "tournament";
@@ -16,6 +16,7 @@ type SimulationEvent = {
   endTime: string;
   matchMinutes: number;
   turnoverMinutes: number;
+  entryFee: number;
   blockCount: number;
   leaguePlayoffGroupSize: number;
   leaguePlayoffMaxRank: string;
@@ -39,6 +40,30 @@ type VenueSettings = {
   cleanupMinutes: number;
 };
 
+type SavedSimulation = {
+  id: string;
+  name: string;
+  savedAt: string;
+  venue: VenueSettings;
+  events: SimulationEvent[];
+  profit: ProfitSettings;
+};
+
+type ExpenseItem = {
+  id: string;
+  name: string;
+  amount: number;
+};
+
+type ProfitSettings = {
+  courtCost: number;
+  otherExpenses: ExpenseItem[];
+};
+
+const SAVED_SIMULATIONS_KEY = "kanto-pickles-progress-simulations-v1";
+const MAX_SAVED_SIMULATIONS = 10;
+const SIMULATOR_ACCESS_KEY = "kanto-pickles-simulator-access";
+
 const formatLabels: Record<EventFormat, string> = {
   round_robin: "総当たり",
   league: "リーグ戦",
@@ -60,6 +85,11 @@ const initialVenue: VenueSettings = {
   cleanupMinutes: 15
 };
 
+const initialProfitSettings: ProfitSettings = {
+  courtCost: 0,
+  otherExpenses: []
+};
+
 const initialEvents: SimulationEvent[] = [
   {
     id: "event-morning",
@@ -72,6 +102,7 @@ const initialEvents: SimulationEvent[] = [
     endTime: "13:00",
     matchMinutes: 15,
     turnoverMinutes: 3,
+    entryFee: 0,
     blockCount: 2,
     leaguePlayoffGroupSize: 1,
     leaguePlayoffMaxRank: "",
@@ -88,6 +119,7 @@ const initialEvents: SimulationEvent[] = [
     endTime: "16:45",
     matchMinutes: 20,
     turnoverMinutes: 5,
+    entryFee: 0,
     blockCount: 2,
     leaguePlayoffGroupSize: 1,
     leaguePlayoffMaxRank: "",
@@ -258,6 +290,7 @@ function createEvent(index: number, matchStart: string, matchEnd: string): Simul
     endTime: matchEnd,
     matchMinutes: 15,
     turnoverMinutes: 3,
+    entryFee: 0,
     blockCount: 2,
     leaguePlayoffGroupSize: 1,
     leaguePlayoffMaxRank: "",
@@ -265,14 +298,17 @@ function createEvent(index: number, matchStart: string, matchEnd: string): Simul
   };
 }
 
-function SimulatorIcon({ name }: { name: "clock" | "court" | "events" | "match" | "plus" | "reset" }) {
+function SimulatorIcon({ name }: { name: "clock" | "court" | "events" | "match" | "plus" | "reset" | "save" | "folder" | "trash" }) {
   const paths: Record<typeof name, React.ReactNode> = {
     clock: <path d="M12 7v5l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />,
     court: <path d="M4 4h16v16H4V4Zm8 0v16M4 9h16M4 15h16" />,
     events: <path d="M5 7h14M5 12h14M5 17h9M3 7h.01M3 12h.01M3 17h.01" />,
     match: <path d="m8 4 8 16M16 4 8 20M5 8h14M5 16h14" />,
     plus: <path d="M12 5v14M5 12h14" />,
-    reset: <path d="M4 9a8 8 0 1 1 1 8m-1 3v-5h5" />
+    reset: <path d="M4 9a8 8 0 1 1 1 8m-1 3v-5h5" />,
+    save: <path d="M5 4h11l3 3v13H5V4Zm3 0v6h8V4m-7 12h6" />,
+    folder: <path d="M3 7h6l2 2h10v10H3V7Zm0 3h18" />,
+    trash: <path d="M4 7h16m-10 4v5m4-5v5M9 7l1-3h4l1 3m-9 0 1 13h10l1-13" />
   };
 
   return (
@@ -287,6 +323,49 @@ function SimulatorIcon({ name }: { name: "clock" | "court" | "events" | "match" 
 export function ProgressSimulator() {
   const [venue, setVenue] = useState<VenueSettings>(initialVenue);
   const [events, setEvents] = useState<SimulationEvent[]>(initialEvents);
+  const [profit, setProfit] = useState<ProfitSettings>(initialProfitSettings);
+  const [savedSimulations, setSavedSimulations] = useState<SavedSimulation[]>([]);
+  const [hasLoadedSavedSimulations, setHasLoadedSavedSimulations] = useState(false);
+  const [isSaveFormOpen, setIsSaveFormOpen] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [saveMessage, setSaveMessage] = useState("");
+  const [isAccessChecked, setIsAccessChecked] = useState(false);
+  const [hasSimulatorAccess, setHasSimulatorAccess] = useState(false);
+  const [accessPin, setAccessPin] = useState("");
+  const [accessError, setAccessError] = useState("");
+  const [isCheckingAccess, setIsCheckingAccess] = useState(false);
+
+  useEffect(() => {
+    try {
+      const savedValue = window.localStorage.getItem(SAVED_SIMULATIONS_KEY);
+      if (!savedValue) return;
+      const parsed = JSON.parse(savedValue) as unknown;
+      if (!Array.isArray(parsed)) return;
+      setSavedSimulations(parsed.filter((item): item is SavedSimulation => {
+        if (!item || typeof item !== "object") return false;
+        const candidate = item as Partial<SavedSimulation>;
+        return typeof candidate.id === "string"
+          && typeof candidate.name === "string"
+          && typeof candidate.savedAt === "string"
+          && Boolean(candidate.venue)
+          && Array.isArray(candidate.events);
+      }).slice(0, MAX_SAVED_SIMULATIONS));
+    } catch {
+      window.localStorage.removeItem(SAVED_SIMULATIONS_KEY);
+    } finally {
+      setHasLoadedSavedSimulations(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedSavedSimulations) return;
+    window.localStorage.setItem(SAVED_SIMULATIONS_KEY, JSON.stringify(savedSimulations));
+  }, [hasLoadedSavedSimulations, savedSimulations]);
+
+  useEffect(() => {
+    setHasSimulatorAccess(window.sessionStorage.getItem(SIMULATOR_ACCESS_KEY) === "granted");
+    setIsAccessChecked(true);
+  }, []);
 
   const venueStart = toMinutes(venue.startTime);
   const venueEnd = toMinutes(venue.endTime);
@@ -392,13 +471,142 @@ export function ProgressSimulator() {
   };
 
   const resetSimulator = () => {
-    setVenue(initialVenue);
-    setEvents(initialEvents);
+    setVenue({ ...initialVenue });
+    setEvents(initialEvents.map((event) => ({ ...event })));
+    setProfit({ ...initialProfitSettings, otherExpenses: [] });
+  };
+
+  const saveSimulation = () => {
+    const trimmedName = saveName.trim();
+    if (!trimmedName) {
+      setSaveMessage("保存名を入力してください。");
+      return;
+    }
+    if (savedSimulations.length >= MAX_SAVED_SIMULATIONS) {
+      setSaveMessage("保存できるのは10件までです。不要なシミュレーションを削除してください。");
+      return;
+    }
+
+    const simulation: SavedSimulation = {
+      id: globalThis.crypto?.randomUUID?.() ?? `simulation-${Date.now()}`,
+      name: trimmedName,
+      savedAt: new Date().toISOString(),
+      venue: { ...venue },
+      events: events.map((event) => ({ ...event })),
+      profit: {
+        courtCost: profit.courtCost,
+        otherExpenses: profit.otherExpenses.map((expense) => ({ ...expense }))
+      }
+    };
+    setSavedSimulations((current) => [simulation, ...current]);
+    setSaveName("");
+    setSaveMessage(`「${trimmedName}」を保存しました。`);
+    setIsSaveFormOpen(false);
+  };
+
+  const loadSimulation = (simulation: SavedSimulation) => {
+    setVenue({ ...simulation.venue });
+    setEvents(simulation.events.map((event) => ({ ...event, entryFee: Number(event.entryFee) || 0 })));
+    setProfit(simulation.profit
+      ? { courtCost: simulation.profit.courtCost, otherExpenses: simulation.profit.otherExpenses.map((expense) => ({ ...expense })) }
+      : { ...initialProfitSettings, otherExpenses: [] });
+    setSaveMessage(`「${simulation.name}」を開きました。`);
+  };
+
+  const deleteSimulation = (id: string) => {
+    setSavedSimulations((current) => current.filter((simulation) => simulation.id !== id));
+    setSaveMessage("保存したシミュレーションを削除しました。");
+  };
+
+  const addExpense = () => {
+    setProfit((current) => ({
+      ...current,
+      otherExpenses: [...current.otherExpenses, { id: globalThis.crypto?.randomUUID?.() ?? `expense-${Date.now()}`, name: "その他", amount: 0 }]
+    }));
+  };
+
+  const updateExpense = (id: string, key: "name" | "amount", value: string | number) => {
+    setProfit((current) => ({
+      ...current,
+      otherExpenses: current.otherExpenses.map((expense) => expense.id === id ? { ...expense, [key]: value } : expense)
+    }));
+  };
+
+  const removeExpense = (id: string) => {
+    setProfit((current) => ({ ...current, otherExpenses: current.otherExpenses.filter((expense) => expense.id !== id) }));
+  };
+
+  const verifySimulatorAccess = async () => {
+    if (!accessPin.trim()) {
+      setAccessError("作成用PINを入力してください。");
+      return;
+    }
+
+    setIsCheckingAccess(true);
+    setAccessError("");
+    try {
+      const response = await fetch("/api/simulator/access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ creatorPin: accessPin })
+      });
+      const payload = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || !payload.ok) {
+        setAccessError(payload.error ?? "PINを確認できませんでした。もう一度お試しください。");
+        return;
+      }
+
+      window.sessionStorage.setItem(SIMULATOR_ACCESS_KEY, "granted");
+      setHasSimulatorAccess(true);
+      setAccessPin("");
+    } catch {
+      setAccessError("PINを確認できませんでした。通信環境を確認してもう一度お試しください。");
+    } finally {
+      setIsCheckingAccess(false);
+    }
+  };
+
+  const formatSavedAt = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "保存日時不明";
+    return new Intl.DateTimeFormat("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(date);
   };
 
   const venueIsInvalid = venueEnd <= venueStart || playableMinutes <= 0;
   const courtConflict = concurrency.maxCourts > venue.courts;
   const theoreticalConcurrentEvents = Math.floor(venue.courts / Math.max(1, Math.min(...events.map((event) => event.courts))));
+  const totalRevenue = events.reduce((sum, event) => sum + (Number(event.entryFee) || 0) * event.entrants, 0);
+  const otherExpensesTotal = profit.otherExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const totalExpenses = profit.courtCost + otherExpensesTotal;
+  const estimatedProfit = totalRevenue - totalExpenses;
+
+  if (!isAccessChecked) {
+    return <main className="app-shell simulator-page"><div className="page-wrap simulator-access-loading">確認しています...</div></main>;
+  }
+
+  if (!hasSimulatorAccess) {
+    return (
+      <main className="app-shell simulator-page">
+        <div className="page-wrap simulator-page-wrap">
+          <header className="topbar simulator-topbar">
+            <a className="brand-lockup" href="/"><span className="brand-mark"><SimulatorIcon name="match" /></span><span>Kanto Pickle&apos;s Draw</span></a>
+          </header>
+          <section className="panel simulator-access-panel" aria-labelledby="simulator-access-title">
+            <p className="eyebrow">CREATOR ACCESS</p>
+            <h1 id="simulator-access-title">進行シミュレーター</h1>
+            <p>大会作成と同じ作成用PINを入力すると、進行シミュレーターを利用できます。</p>
+            <form onSubmit={(event) => { event.preventDefault(); void verifySimulatorAccess(); }}>
+              <label className="field">作成用PIN
+                <input autoComplete="current-password" className="input" onChange={(event) => setAccessPin(event.target.value)} placeholder="作成用PINを入力" type="password" value={accessPin} />
+              </label>
+              {accessError && <p className="simulator-alert simulator-alert-error">{accessError}</p>}
+              <button className="btn-primary" disabled={isCheckingAccess} type="submit">{isCheckingAccess ? "確認中..." : "進行シミュレーターを開く"}</button>
+            </form>
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="app-shell simulator-page">
@@ -421,10 +629,16 @@ export function ProgressSimulator() {
             <h1>進行シミュレーター</h1>
             <p>準備から撤収までを含めて、種目ごとの試合数と参加定員をすぐに試算できます。</p>
           </div>
-          <button className="btn-ghost simulator-reset" onClick={resetSimulator} type="button">
-            <SimulatorIcon name="reset" />
-            初期値に戻す
-          </button>
+          <div className="simulator-intro-actions">
+            <button className="btn-primary simulator-save-toggle" onClick={() => { setIsSaveFormOpen((current) => !current); setSaveMessage(""); }} type="button">
+              <SimulatorIcon name="save" />
+              保存する
+            </button>
+            <button className="btn-ghost simulator-reset" onClick={resetSimulator} type="button">
+              <SimulatorIcon name="reset" />
+              初期値に戻す
+            </button>
+          </div>
         </section>
 
         <section className="simulator-summary" aria-label="シミュレーション概要">
@@ -446,10 +660,70 @@ export function ProgressSimulator() {
           </article>
         </section>
 
+        <section className="panel simulator-saved-panel" aria-labelledby="saved-simulations-heading">
+          <div className="simulator-saved-heading">
+            <div>
+              <p className="eyebrow">SAVED PLANS</p>
+              <h2 id="saved-simulations-heading">保存したシミュレーション</h2>
+              <p>この端末・このブラウザ内に最大10件まで保存できます。</p>
+            </div>
+            <span className="simulator-saved-count">{savedSimulations.length} / {MAX_SAVED_SIMULATIONS}</span>
+          </div>
+
+          {isSaveFormOpen && <div className="simulator-save-form">
+            <label className="field">保存名
+              <input autoFocus className="input" maxLength={40} onChange={(event) => setSaveName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") saveSimulation(); }} placeholder="例：7月大会・午前午後の進行案" value={saveName} />
+            </label>
+            <div className="simulator-save-form-actions">
+              <button className="btn-primary" disabled={savedSimulations.length >= MAX_SAVED_SIMULATIONS} onClick={saveSimulation} type="button"><SimulatorIcon name="save" />この内容を保存</button>
+              <button className="btn-ghost" onClick={() => { setIsSaveFormOpen(false); setSaveMessage(""); }} type="button">キャンセル</button>
+            </div>
+          </div>}
+
+          {saveMessage && <p className="simulator-save-message" role="status">{saveMessage}</p>}
+
+          {savedSimulations.length === 0 ? (
+            <p className="simulator-empty-saved"><SimulatorIcon name="folder" />まだ保存したシミュレーションはありません。</p>
+          ) : (
+            <ul className="simulator-saved-list">
+              {savedSimulations.map((simulation) => (
+                <li key={simulation.id}>
+                  <div><strong>{simulation.name}</strong><span>{formatSavedAt(simulation.savedAt)} 保存・{simulation.events.length}種目</span></div>
+                  <div className="simulator-saved-actions">
+                    <button className="btn-ghost" onClick={() => loadSimulation(simulation)} type="button">開く</button>
+                    <button aria-label={`${simulation.name}を削除`} className="simulator-delete-saved" onClick={() => deleteSimulation(simulation.id)} type="button"><SimulatorIcon name="trash" /></button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="panel simulator-profit-panel">
+          <div className="simulator-section-heading">
+            <span className="simulator-step">1</span>
+            <div><p className="eyebrow">PROFIT</p><h2>利益計算</h2></div>
+          </div>
+          <div className="simulator-profit-grid">
+            <div className="simulator-profit-total"><span>売上</span><strong>{totalRevenue.toLocaleString()}<small>円</small></strong><p>各種目の参加単価 × 予定{events.reduce((sum, event) => sum + event.entrants, 0)}{events.every((event) => event.unit === "teams") ? "チーム" : "組"}</p></div>
+            <div className="simulator-profit-total"><span>経費</span><strong>{totalExpenses.toLocaleString()}<small>円</small></strong><p>コート代・その他経費の合計</p></div>
+            <div className={`simulator-profit-total is-profit ${estimatedProfit < 0 ? "is-loss" : ""}`}><span>利益</span><strong>{estimatedProfit.toLocaleString()}<small>円</small></strong><p>売上から経費を引いた見込み</p></div>
+          </div>
+          <div className="simulator-profit-inputs">
+            <label className="field">コート代<input className="input" min="0" onChange={(event) => setProfit((current) => ({ ...current, courtCost: clampNumber(Number(event.target.value), 0) }))} type="number" value={profit.courtCost} /><span className="simulator-input-unit">円</span></label>
+            {profit.otherExpenses.map((expense) => <div className="simulator-expense-row" key={expense.id}>
+              <label className="field">その他の経費<input className="input" onChange={(event) => updateExpense(expense.id, "name", event.target.value)} value={expense.name} /></label>
+              <label className="field">金額<input className="input" min="0" onChange={(event) => updateExpense(expense.id, "amount", clampNumber(Number(event.target.value), 0))} type="number" value={expense.amount} /><span className="simulator-input-unit">円</span></label>
+              <button className="simulator-remove-expense" onClick={() => removeExpense(expense.id)} type="button">削除</button>
+            </div>)}
+            <button className="btn-ghost simulator-add-expense" onClick={addExpense} type="button"><SimulatorIcon name="plus" />その他の経費を追加</button>
+          </div>
+        </section>
+
         <div className="simulator-layout">
           <section className="panel simulator-venue-panel">
             <div className="simulator-section-heading">
-              <span className="simulator-step">1</span>
+              <span className="simulator-step">2</span>
               <div>
                 <p className="eyebrow">VENUE</p>
                 <h2>会場の利用条件</h2>
@@ -501,7 +775,7 @@ export function ProgressSimulator() {
         <section className="simulator-events-section">
           <div className="simulator-events-header">
             <div className="simulator-section-heading">
-              <span className="simulator-step">2</span>
+              <span className="simulator-step">3</span>
               <div>
                 <p className="eyebrow">EVENTS</p>
                 <h2>開催する種目</h2>
@@ -525,6 +799,7 @@ export function ProgressSimulator() {
                     <label className="field">参加単位<select className="input" value={event.unit} onChange={(changeEvent) => updateEvent(event.id, "unit", changeEvent.target.value as EventUnit)}><option value="pairs">組</option><option value="teams">チーム</option></select></label>
                     <label className="field">大会形式<select className="input" value={event.format} onChange={(changeEvent) => updateEvent(event.id, "format", changeEvent.target.value as EventFormat)}><option value="round_robin">総当たり</option><option value="league">リーグ戦</option><option value="tournament">トーナメント</option></select></label>
                     <label className="field">予定数<input className="input" min="2" max="128" type="number" value={event.entrants} onChange={(changeEvent) => updateEvent(event.id, "entrants", clampNumber(Number(changeEvent.target.value), 2, 128))} /><span className="simulator-input-unit">{unitLabels[event.unit]}</span></label>
+                    <label className="field">参加単価<input className="input" min="0" type="number" value={event.entryFee} onChange={(changeEvent) => updateEvent(event.id, "entryFee", clampNumber(Number(changeEvent.target.value), 0))} /><span className="simulator-input-unit">円</span></label>
                     {event.format === "league" && <>
                       <label className="field">ブロック数<input className="input" min="2" max="16" type="number" value={event.blockCount} onChange={(changeEvent) => updateEvent(event.id, "blockCount", clampNumber(Number(changeEvent.target.value), 2, 16))} /></label>
                       <label className="field">順位別Tのまとめ方
@@ -584,7 +859,7 @@ export function ProgressSimulator() {
 
         <section className="panel simulator-overview-panel">
           <div className="simulator-section-heading">
-            <span className="simulator-step">3</span>
+            <span className="simulator-step">4</span>
             <div><p className="eyebrow">TIMELINE</p><h2>種目の時間配置</h2></div>
           </div>
           <div className="simulator-event-timeline">
