@@ -2414,19 +2414,91 @@ select option {
 .simulator-timeline-bar {
   display: flex;
   min-height: 42px;
-  overflow: hidden;
   border-radius: 13px;
   background: #edf1fb;
 }
 
-.simulator-timeline-bar span {
+.simulator-timeline-segment {
+  position: relative;
   display: grid;
   min-width: 7px;
   place-items: center;
+  cursor: help;
+}
+
+.simulator-timeline-segment:first-child {
+  border-radius: 13px 0 0 13px;
+}
+
+.simulator-timeline-segment:last-child {
+  border-radius: 0 13px 13px 0;
+}
+
+.simulator-timeline-label {
+  display: block;
+  max-width: 100%;
   overflow: hidden;
   font-size: 0.66rem;
   font-weight: 700;
+  text-overflow: clip;
   white-space: nowrap;
+}
+
+.simulator-time-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 8;
+  width: max-content;
+  padding: 0.38rem 0.55rem;
+  border-radius: 8px;
+  background: #18233d;
+  box-shadow: 0 8px 20px rgba(38, 50, 82, 0.2);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 160ms ease, transform 160ms ease;
+  white-space: nowrap;
+}
+
+.simulator-time-tooltip::after {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border: 5px solid transparent;
+  border-top-color: #18233d;
+  content: "";
+  transform: translateX(-50%);
+}
+
+.simulator-timeline-segment:hover .simulator-time-tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.simulator-timeline-segment:first-child .simulator-time-tooltip {
+  left: 0;
+  transform: translate(0, 4px);
+}
+
+.simulator-timeline-segment:first-child:hover .simulator-time-tooltip {
+  transform: translate(0, 0);
+}
+
+.simulator-timeline-segment:last-child .simulator-time-tooltip {
+  right: 0;
+  left: auto;
+  transform: translate(0, 4px);
+}
+
+.simulator-timeline-segment:last-child:hover .simulator-time-tooltip {
+  transform: translate(0, 0);
 }
 
 .simulator-timeline-bar .is-reception { background: #e7e9ff; color: #555bc8; }
@@ -2979,11 +3051,11 @@ select option {
     text-align: center;
   }
 
-  .simulator-timeline-bar span {
+  .simulator-timeline-label {
     font-size: 0;
   }
 
-  .simulator-timeline-bar .is-matches {
+  .simulator-timeline-bar .is-matches .simulator-timeline-label {
     font-size: 0.62rem;
   }
 

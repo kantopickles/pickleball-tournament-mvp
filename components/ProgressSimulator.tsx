@@ -747,11 +747,26 @@ export function ProgressSimulator() {
             <div className="simulator-timeline" aria-label="会場の時間配分">
               <div className="simulator-timeline-head"><span>{venue.startTime}</span><strong>試合可能 {matchStart} - {matchEnd}</strong><span>{venue.endTime}</span></div>
               <div className="simulator-timeline-bar">
-                <span className="is-reception" style={{ flex: venue.receptionMinutes || 0.01 }}>準備</span>
-                <span className="is-warmup" style={{ flex: venue.warmupMinutes || 0.01 }}>受付・コート解放</span>
-                <span className="is-ceremony" style={{ flex: venue.ceremonyMinutes || 0.01 }}>開会式</span>
-                <span className="is-matches" style={{ flex: playableMinutes || 0.01 }}>試合</span>
-                <span className="is-cleanup" style={{ flex: venue.cleanupMinutes || 0.01 }}>撤収</span>
+                <span aria-label={`準備 ${toTime(venueStart)}から${toTime(venueStart + venue.receptionMinutes)}`} className="simulator-timeline-segment is-reception" style={{ flex: venue.receptionMinutes || 0.01 }}>
+                  <span className="simulator-timeline-label">準備</span>
+                  <span className="simulator-time-tooltip">{toTime(venueStart)} - {toTime(venueStart + venue.receptionMinutes)}</span>
+                </span>
+                <span aria-label={`受付・コート解放 ${toTime(venueStart + venue.receptionMinutes)}から${toTime(venueStart + venue.receptionMinutes + venue.warmupMinutes)}`} className="simulator-timeline-segment is-warmup" style={{ flex: venue.warmupMinutes || 0.01 }}>
+                  <span className="simulator-timeline-label">受付・コート解放</span>
+                  <span className="simulator-time-tooltip">{toTime(venueStart + venue.receptionMinutes)} - {toTime(venueStart + venue.receptionMinutes + venue.warmupMinutes)}</span>
+                </span>
+                <span aria-label={`開会式 ${toTime(venueStart + venue.receptionMinutes + venue.warmupMinutes)}から${matchStart}`} className="simulator-timeline-segment is-ceremony" style={{ flex: venue.ceremonyMinutes || 0.01 }}>
+                  <span className="simulator-timeline-label">開会式</span>
+                  <span className="simulator-time-tooltip">{toTime(venueStart + venue.receptionMinutes + venue.warmupMinutes)} - {matchStart}</span>
+                </span>
+                <span aria-label={`試合 ${matchStart}から${matchEnd}`} className="simulator-timeline-segment is-matches" style={{ flex: playableMinutes || 0.01 }}>
+                  <span className="simulator-timeline-label">試合</span>
+                  <span className="simulator-time-tooltip">{matchStart} - {matchEnd}</span>
+                </span>
+                <span aria-label={`撤収 ${matchEnd}から${venue.endTime}`} className="simulator-timeline-segment is-cleanup" style={{ flex: venue.cleanupMinutes || 0.01 }}>
+                  <span className="simulator-timeline-label">撤収</span>
+                  <span className="simulator-time-tooltip">{matchEnd} - {venue.endTime}</span>
+                </span>
               </div>
             </div>
 
