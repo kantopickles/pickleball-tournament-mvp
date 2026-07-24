@@ -710,12 +710,16 @@ export function ProgressSimulator() {
             <div className={`simulator-profit-total is-profit ${estimatedProfit < 0 ? "is-loss" : ""}`}><span>利益</span><strong>{estimatedProfit.toLocaleString()}<small>円</small></strong><p>売上から経費を引いた見込み</p></div>
           </div>
           <div className="simulator-profit-inputs">
-            <label className="field">コート代<input className="input" min="0" onChange={(event) => setProfit((current) => ({ ...current, courtCost: clampNumber(Number(event.target.value), 0) }))} type="number" value={profit.courtCost} /><span className="simulator-input-unit">円</span></label>
-            {profit.otherExpenses.map((expense) => <div className="simulator-expense-row" key={expense.id}>
-              <label className="field">その他の経費<input className="input" onChange={(event) => updateExpense(expense.id, "name", event.target.value)} value={expense.name} /></label>
-              <label className="field">金額<input className="input" min="0" onChange={(event) => updateExpense(expense.id, "amount", clampNumber(Number(event.target.value), 0))} type="number" value={expense.amount} /><span className="simulator-input-unit">円</span></label>
-              <button className="simulator-remove-expense" onClick={() => removeExpense(expense.id)} type="button">削除</button>
-            </div>)}
+            <div className="simulator-expense-list">
+              <div className="simulator-expense-row simulator-court-cost-row">
+                <label className="field">コート代<input className="input" max="999999" min="0" onChange={(event) => setProfit((current) => ({ ...current, courtCost: clampNumber(Number(event.target.value), 0, 999999) }))} type="number" value={profit.courtCost} /><span className="simulator-input-unit">円</span></label>
+              </div>
+              {profit.otherExpenses.map((expense, index) => <div className="simulator-expense-row" key={expense.id}>
+                <label className="field">その他の経費 {index + 1}<input className="input" onChange={(event) => updateExpense(expense.id, "name", event.target.value)} value={expense.name} /></label>
+                <label className="field">金額<input className="input" max="999999" min="0" onChange={(event) => updateExpense(expense.id, "amount", clampNumber(Number(event.target.value), 0, 999999))} type="number" value={expense.amount} /><span className="simulator-input-unit">円</span></label>
+                <button className="simulator-remove-expense" onClick={() => removeExpense(expense.id)} type="button">削除</button>
+              </div>)}
+            </div>
             <button className="btn-ghost simulator-add-expense" onClick={addExpense} type="button"><SimulatorIcon name="plus" />その他の経費を追加</button>
           </div>
         </section>

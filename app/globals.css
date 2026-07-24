@@ -2176,9 +2176,12 @@ select option {
 
 .simulator-profit-inputs {
   display: grid;
-  grid-template-columns: minmax(0, 220px) 1fr;
   gap: 0.65rem;
-  align-items: end;
+}
+
+.simulator-expense-list {
+  display: grid;
+  gap: 0.65rem;
 }
 
 .simulator-expense-row {
@@ -2186,6 +2189,14 @@ select option {
   grid-template-columns: minmax(0, 1fr) minmax(110px, 0.45fr) auto;
   gap: 0.65rem;
   align-items: end;
+}
+
+.simulator-court-cost-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.simulator-court-cost-row .field {
+  max-width: 360px;
 }
 
 .simulator-remove-expense {
