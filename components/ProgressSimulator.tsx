@@ -326,6 +326,7 @@ export function ProgressSimulator() {
   const [profit, setProfit] = useState<ProfitSettings>(initialProfitSettings);
   const [savedSimulations, setSavedSimulations] = useState<SavedSimulation[]>([]);
   const [hasLoadedSavedSimulations, setHasLoadedSavedSimulations] = useState(false);
+  const [activeSavedSimulationId, setActiveSavedSimulationId] = useState<string | null>(null);
   const [isSaveFormOpen, setIsSaveFormOpen] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
@@ -361,6 +362,28 @@ export function ProgressSimulator() {
     if (!hasLoadedSavedSimulations) return;
     window.localStorage.setItem(SAVED_SIMULATIONS_KEY, JSON.stringify(savedSimulations));
   }, [hasLoadedSavedSimulations, savedSimulations]);
+
+  useEffect(() => {
+    if (!hasLoadedSavedSimulations || !activeSavedSimulationId) return;
+
+    const saveTimer = window.setTimeout(() => {
+      setSavedSimulations((current) => current.map((simulation) => {
+        if (simulation.id !== activeSavedSimulationId) return simulation;
+        return {
+          ...simulation,
+          savedAt: new Date().toISOString(),
+          venue: { ...venue },
+          events: events.map((event) => ({ ...event })),
+          profit: {
+            courtCost: profit.courtCost,
+            otherExpenses: profit.otherExpenses.map((expense) => ({ ...expense }))
+          }
+        };
+      }));
+    }, 450);
+
+    return () => window.clearTimeout(saveTimer);
+  }, [activeSavedSimulationId, events, hasLoadedSavedSimulations, profit, venue]);
 
   useEffect(() => {
     setHasSimulatorAccess(window.sessionStorage.getItem(SIMULATOR_ACCESS_KEY) === "granted");
@@ -474,6 +497,7 @@ export function ProgressSimulator() {
     setVenue({ ...initialVenue });
     setEvents(initialEvents.map((event) => ({ ...event })));
     setProfit({ ...initialProfitSettings, otherExpenses: [] });
+    setActiveSavedSimulationId(null);
   };
 
   const saveSimulation = () => {
@@ -499,6 +523,7 @@ export function ProgressSimulator() {
       }
     };
     setSavedSimulations((current) => [simulation, ...current]);
+    setActiveSavedSimulationId(simulation.id);
     setSaveName("");
     setSaveMessage(`「${trimmedName}」を保存しました。`);
     setIsSaveFormOpen(false);
@@ -510,11 +535,13 @@ export function ProgressSimulator() {
     setProfit(simulation.profit
       ? { courtCost: simulation.profit.courtCost, otherExpenses: simulation.profit.otherExpenses.map((expense) => ({ ...expense })) }
       : { ...initialProfitSettings, otherExpenses: [] });
+    setActiveSavedSimulationId(simulation.id);
     setSaveMessage(`「${simulation.name}」を開きました。`);
   };
 
   const deleteSimulation = (id: string) => {
     setSavedSimulations((current) => current.filter((simulation) => simulation.id !== id));
+    if (activeSavedSimulationId === id) setActiveSavedSimulationId(null);
     setSaveMessage("保存したシミュレーションを削除しました。");
   };
 
@@ -665,7 +692,7 @@ export function ProgressSimulator() {
             <div>
               <p className="eyebrow">SAVED PLANS</p>
               <h2 id="saved-simulations-heading">保存したシミュレーション</h2>
-              <p>この端末・このブラウザ内に最大10件まで保存できます。</p>
+              <p>この端末・このブラウザ内に最大10件まで保存できます。開いた案は編集後に自動保存されます。</p>
             </div>
             <span className="simulator-saved-count">{savedSimulations.length} / {MAX_SAVED_SIMULATIONS}</span>
           </div>
@@ -688,7 +715,7 @@ export function ProgressSimulator() {
             <ul className="simulator-saved-list">
               {savedSimulations.map((simulation) => (
                 <li key={simulation.id}>
-                  <div><strong>{simulation.name}</strong><span>{formatSavedAt(simulation.savedAt)} 保存・{simulation.events.length}種目</span></div>
+                  <div><strong>{simulation.name}</strong><span>{activeSavedSimulationId === simulation.id ? "自動保存中・" : ""}{formatSavedAt(simulation.savedAt)} 保存・{simulation.events.length}種目</span></div>
                   <div className="simulator-saved-actions">
                     <button className="btn-ghost" onClick={() => loadSimulation(simulation)} type="button">開く</button>
                     <button aria-label={`${simulation.name}を削除`} className="simulator-delete-saved" onClick={() => deleteSimulation(simulation.id)} type="button"><SimulatorIcon name="trash" /></button>
