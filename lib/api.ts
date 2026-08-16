@@ -19,7 +19,13 @@ export async function getTournamentBySlug(slug: string) {
 export async function verifyAdminPin(slug: string, pin: string) {
   const tournament = await getTournamentBySlug(slug);
   if (!tournament) return null;
-  return tournament.admin_pin_hash === hashPin(pin) ? tournament : null;
+
+  const enteredPin = pin.trim();
+  const creatorPin = process.env.CREATOR_PIN?.trim();
+  const isTournamentAdmin = tournament.admin_pin_hash === hashPin(enteredPin);
+  const isCreator = Boolean(creatorPin) && enteredPin === creatorPin;
+
+  return isTournamentAdmin || isCreator ? tournament : null;
 }
 
 export async function getSnapshot(slug: string) {

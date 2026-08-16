@@ -106,11 +106,11 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const friendlyMessage = (text: string, fallback: string) => {
     switch (text) {
       case "管理者PINを入力してください。":
-        return "管理者PINを入れてから進めてください。";
+        return "管理者PINまたは作成用PINを入れてから進めてください。";
       case "参加者PINを入力してください。":
         return "参加者PINを入れてから進めてください。";
       case "管理者PINが違います。":
-        return "管理者PINが合っていないようです。もう一度確認してください。";
+        return "管理者PINまたは作成用PINが合っていないようです。もう一度確認してください。";
       case "参加者PINが違います。":
         return "参加者PINが合っていないようです。もう一度確認してください。";
       case "参加者PINは4桁の数字にしてください。":
@@ -934,7 +934,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               <div>
                 <p className="eyebrow">Secure access</p>
                 <h1>大会にログイン</h1>
-                <p>参加者は参加者PIN、主催者は管理者PINを入力してください。</p>
+                <p>参加者は参加者PIN、主催者は管理者PINまたは作成用PINを入力してください。</p>
               </div>
             </div>
             {isRestoringAccess ? (
@@ -947,7 +947,11 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 <button
                   aria-pressed={accessMode === "participant"}
                   className={accessMode === "participant" ? "access-role-button is-active" : "access-role-button"}
-                  onClick={() => setAccessMode("participant")}
+                  onClick={() => {
+                    setAccessMode("participant");
+                    setAccessPin("");
+                    setMessage(null);
+                  }}
                   type="button"
                 >
                   <span aria-hidden="true">♙</span>
@@ -956,7 +960,11 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 <button
                   aria-pressed={accessMode === "admin"}
                   className={accessMode === "admin" ? "access-role-button is-active" : "access-role-button"}
-                  onClick={() => setAccessMode("admin")}
+                  onClick={() => {
+                    setAccessMode("admin");
+                    setAccessPin("");
+                    setMessage(null);
+                  }}
                   type="button"
                 >
                   <span aria-hidden="true">⚙</span>
@@ -964,14 +972,16 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 </button>
               </div>
               <label className="field">
-                {accessMode === "admin" ? "管理者PIN" : "参加者PIN"}
+                {accessMode === "admin" ? "管理者PIN または作成用PIN" : "参加者PIN"}
                 <input
                   className="input"
-                  inputMode="numeric"
-                  maxLength={4}
-                  onChange={(event) => setAccessPin(normalizePin(event.target.value))}
-                  pattern="[0-9]{4}"
-                  placeholder="4桁の数字を入力"
+                  inputMode={accessMode === "admin" ? "text" : "numeric"}
+                  maxLength={accessMode === "admin" ? 64 : 4}
+                  onChange={(event) =>
+                    setAccessPin(accessMode === "admin" ? event.target.value.slice(0, 64) : normalizePin(event.target.value))
+                  }
+                  pattern={accessMode === "admin" ? undefined : "[0-9]{4}"}
+                  placeholder={accessMode === "admin" ? "管理者PIN または作成用PIN" : "4桁の数字を入力"}
                   type="password"
                   value={accessPin}
                 />
@@ -1192,15 +1202,14 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               <h2 className="mt-1 text-lg font-bold">管理者メニュー</h2>
               <div className="mt-3 grid gap-3">
                 <label className="field">
-                  管理者PIN
+                  管理者PIN または作成用PIN
                   <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
                     <input
                       className="input"
-                      inputMode="numeric"
-                      maxLength={4}
-                      onChange={(event) => setAdminPin(normalizePin(event.target.value))}
-                      pattern="[0-9]{4}"
-                      placeholder="4桁の数字"
+                      inputMode="text"
+                      maxLength={64}
+                      onChange={(event) => setAdminPin(event.target.value.slice(0, 64))}
+                      placeholder="管理者PIN または作成用PIN"
                       type="password"
                       value={adminPin}
                     />
@@ -1217,7 +1226,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                 <p className="text-sm text-[#6f7b94]">
                   {isAdminAuthenticated
                     ? "管理者としてログイン中です。このまま各種編集ができます。"
-                    : "先に管理者PINでログインすると、下の編集機能が使えます。"}
+                    : "先に管理者PINまたは作成用PINでログインすると、下の編集機能が使えます。"}
                 </p>
                 <div className="sub-panel grid gap-2">
                   <label className="field">
