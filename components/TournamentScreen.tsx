@@ -1006,26 +1006,54 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const activeMatch = activeMatchId ? matchById.get(activeMatchId) ?? null : null;
   const scheduledMatchIds = new Set(snapshot.scheduleEntries.map((entry) => entry.match_id));
   const unscheduledMatches = snapshot.matches.filter((match) => !scheduledMatchIds.has(match.id));
-  const currentMatchesByCourt = Array.from(new Set(snapshot.scheduleEntries.map((entry) => entry.court_name)))
-    .sort((left, right) => left.localeCompare(right, "ja"))
+  const scheduleTable = buildScheduleTable(snapshot.scheduleEntries);
+  const scheduleCourtOptions = scheduleTable.courts;
+  const currentScheduleCandidates = scheduleTable.courts
     .map((courtName) => {
-      const entry = snapshot.scheduleEntries.find((item) => {
-        if (item.court_name !== courtName) return false;
-        return effectiveScheduleStatus(item, matchById.get(item.match_id)) !== "completed";
-      });
+      const courtEntries = scheduleTable.byCourt.get(courtName) ?? [];
+      const rowIndex = courtEntries.findIndex(
+        (entry) => effectiveScheduleStatus(entry, matchById.get(entry.match_id)) !== "completed"
+      );
+      if (rowIndex < 0) return null;
+
+      const entry = courtEntries[rowIndex];
       return {
         courtName,
         entry,
-        match: entry ? matchById.get(entry.match_id) : undefined
+        match: matchById.get(entry.match_id),
+        rowIndex
       };
-    });
-  const currentScheduleEntryIds = new Set(
-    currentMatchesByCourt
-      .map(({ entry }) => entry?.id)
-      .filter((entryId): entryId is string => Boolean(entryId))
-  );
-  const scheduleTable = buildScheduleTable(snapshot.scheduleEntries);
-  const scheduleCourtOptions = scheduleTable.courts;
+    })
+    .filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate))
+    .sort(
+      (left, right) =>
+        left.rowIndex - right.rowIndex ||
+        left.entry.sequence - right.entry.sequence ||
+        left.courtName.localeCompare(right.courtName, "ja")
+    );
+  const currentScheduleEntryIds = new Set<string>();
+  const preparingScheduleEntryIds = new Set<string>();
+  const busyParticipantIdsByScheduleEntry = new Map<string, Set<string>>();
+  const activeCourtByParticipantId = new Map<string, string>();
+
+  currentScheduleCandidates.forEach(({ courtName, entry, match }) => {
+    const participantIds = [match?.participant1_id, match?.participant2_id].filter(
+      (participantId): participantId is string => Boolean(participantId)
+    );
+    const busyParticipantIds = participantIds.filter((participantId) => activeCourtByParticipantId.has(participantId));
+    const isReady = participantIds.length === 2;
+
+    if (!isReady || busyParticipantIds.length > 0) {
+      preparingScheduleEntryIds.add(entry.id);
+      if (busyParticipantIds.length > 0) {
+        busyParticipantIdsByScheduleEntry.set(entry.id, new Set(busyParticipantIds));
+      }
+      return;
+    }
+
+    currentScheduleEntryIds.add(entry.id);
+    participantIds.forEach((participantId) => activeCourtByParticipantId.set(participantId, courtName));
+  });
 
   return (
     <main className="app-shell">
@@ -1687,6 +1715,8 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                             const effectiveStatus = effectiveScheduleStatus(entry, match);
                             const hasScheduleDraftChanges = draft.courtName !== entry.court_name;
                             const isCurrentMatch = currentScheduleEntryIds.has(entry.id) && effectiveStatus !== "completed";
+                            const isPreparingMatch = preparingScheduleEntryIds.has(entry.id) && effectiveStatus !== "completed";
+                            const busyParticipantIds = busyParticipantIdsByScheduleEntry.get(entry.id);
 
                             return (
                               <article
@@ -1727,6 +1757,10 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                       <span className="rounded-full bg-[rgba(123,132,183,0.12)] px-2 py-1 text-[11px] font-bold text-[#5d6683]">
                                         現在の試合
                                       </span>
+                                    ) : isPreparingMatch ? (
+                                      <span className="rounded-full bg-[rgba(241,184,75,0.14)] px-2 py-1 text-[11px] font-bold text-[#a97116]">
+                                        対戦準備中
+                                      </span>
                                     ) : null}
                                   </div>
 
@@ -1736,17 +1770,38 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                         <span className="text-xs text-[#7c86a2]">{matchResultMark(match, "participant1")}</span>
                                         <span>{displayLabel(nameFor(match.participant1_id, participantById))}</span>
                                         {match.participant1_score !== null ? <span className="text-sm text-[#5d6683]">{match.participant1_score}</span> : null}
+                                        {match.participant1_id && busyParticipantIds?.has(match.participant1_id) ? (
+                                          <span className="rounded-full bg-[rgba(241,184,75,0.14)] px-2 py-1 text-[10px] font-bold text-[#a97116]">別コートにて試合中</span>
+                                        ) : null}
                                       </p>
                                       <p className="text-[11px] font-bold tracking-[0.24em] text-[#8a93ac]">VS</p>
                                       <p className="flex items-center justify-center gap-1 break-words" title={nameFor(match.participant2_id, participantById)}>
                                         <span className="text-xs text-[#7c86a2]">{matchResultMark(match, "participant2")}</span>
                                         <span>{displayLabel(nameFor(match.participant2_id, participantById))}</span>
                                         {match.participant2_score !== null ? <span className="text-sm text-[#5d6683]">{match.participant2_score}</span> : null}
+                                        {match.participant2_id && busyParticipantIds?.has(match.participant2_id) ? (
+                                          <span className="rounded-full bg-[rgba(241,184,75,0.14)] px-2 py-1 text-[10px] font-bold text-[#a97116]">別コートにて試合中</span>
+                                        ) : null}
                                       </p>
                                     </div>
                                   ) : (
                                     <p className="text-sm text-[#6f7b94]">元の試合情報が見つかりません</p>
                                   )}
+
+                                  {match?.participant1_id && match.participant2_id ? (
+                                    <button
+                                      className={`w-full rounded-xl border px-3 py-2 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-[#5a5df0] ${
+                                        match.locked
+                                          ? "border-[rgba(90,93,240,0.16)] bg-[rgba(90,93,240,0.08)] text-[#5a5df0] hover:bg-[rgba(90,93,240,0.12)]"
+                                          : "border-[rgba(241,184,75,0.24)] bg-[rgba(241,184,75,0.12)] text-[#a97116] hover:bg-[rgba(241,184,75,0.18)]"
+                                      }`}
+                                      onClick={() => openMatchModal(match.id)}
+                                      onPointerDown={(event) => event.stopPropagation()}
+                                      type="button"
+                                    >
+                                      {match.locked ? "結果を確認" : "スコアを入力"}
+                                    </button>
+                                  ) : null}
 
                                   {canUseAdminTools ? (
                                     <div className="grid gap-2">
@@ -1835,6 +1890,8 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                           const effectiveStatus = effectiveScheduleStatus(entry, match);
                           const hasScheduleDraftChanges = draft.courtName !== entry.court_name;
                           const isCurrentMatch = currentScheduleEntryIds.has(entry.id) && effectiveStatus !== "completed";
+                          const isPreparingMatch = preparingScheduleEntryIds.has(entry.id) && effectiveStatus !== "completed";
+                          const busyParticipantIds = busyParticipantIdsByScheduleEntry.get(entry.id);
 
                           return (
                             <td
@@ -1877,6 +1934,10 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                     <span className="rounded-full bg-[rgba(123,132,183,0.12)] px-2 py-1 text-[11px] font-bold text-[#5d6683]">
                                       現在の試合
                                     </span>
+                                  ) : isPreparingMatch ? (
+                                    <span className="rounded-full bg-[rgba(241,184,75,0.14)] px-2 py-1 text-[11px] font-bold text-[#a97116]">
+                                      対戦準備中
+                                    </span>
                                   ) : null}
                                 </div>
                                 {match ? (
@@ -1885,17 +1946,38 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                       <span className="text-[10px] text-[#7c86a2]">{matchResultMark(match, "participant1")}</span>
                                       <span>{displayLabel(nameFor(match.participant1_id, participantById))}</span>
                                       {match.participant1_score !== null ? <span className="text-xs text-[#5d6683]">{match.participant1_score}</span> : null}
+                                      {match.participant1_id && busyParticipantIds?.has(match.participant1_id) ? (
+                                        <span className="rounded-full bg-[rgba(241,184,75,0.14)] px-1.5 py-0.5 text-[9px] font-bold text-[#a97116]">別コートにて試合中</span>
+                                      ) : null}
                                     </p>
                                     <p className="text-xs font-bold tracking-[0.2em] text-[#7c86a2]">VS</p>
                                     <p className="flex items-center justify-center gap-1 break-words" title={nameFor(match.participant2_id, participantById)}>
                                       <span className="text-[10px] text-[#7c86a2]">{matchResultMark(match, "participant2")}</span>
                                       <span>{displayLabel(nameFor(match.participant2_id, participantById))}</span>
                                       {match.participant2_score !== null ? <span className="text-xs text-[#5d6683]">{match.participant2_score}</span> : null}
+                                      {match.participant2_id && busyParticipantIds?.has(match.participant2_id) ? (
+                                        <span className="rounded-full bg-[rgba(241,184,75,0.14)] px-1.5 py-0.5 text-[9px] font-bold text-[#a97116]">別コートにて試合中</span>
+                                      ) : null}
                                     </p>
                                   </div>
                                 ) : (
                                   <p className="text-xs text-[#6f7b94]">元の試合情報が見つかりません</p>
                                 )}
+
+                                {match?.participant1_id && match.participant2_id ? (
+                                  <button
+                                    className={`w-full rounded-lg border px-2 py-1.5 text-xs font-bold transition focus:outline-none focus:ring-2 focus:ring-[#5a5df0] ${
+                                      match.locked
+                                        ? "border-[rgba(90,93,240,0.16)] bg-[rgba(90,93,240,0.08)] text-[#5a5df0] hover:bg-[rgba(90,93,240,0.12)]"
+                                        : "border-[rgba(241,184,75,0.24)] bg-[rgba(241,184,75,0.12)] text-[#a97116] hover:bg-[rgba(241,184,75,0.18)]"
+                                    }`}
+                                    onClick={() => openMatchModal(match.id)}
+                                    onPointerDown={(event) => event.stopPropagation()}
+                                    type="button"
+                                  >
+                                    {match.locked ? "結果を確認" : "スコアを入力"}
+                                  </button>
+                                ) : null}
 
                                 <div className="grid gap-2">
                                   {canUseAdminTools ? (
