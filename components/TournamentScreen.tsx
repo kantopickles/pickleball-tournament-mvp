@@ -82,6 +82,9 @@ export default function TournamentScreen({ slug }: { slug: string }) {
   const [coverZoom, setCoverZoom] = useState(1);
   const [coverOffsetX, setCoverOffsetX] = useState(50);
   const [coverOffsetY, setCoverOffsetY] = useState(50);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareQrCodeUrl, setShareQrCodeUrl] = useState("");
+  const [shareStatus, setShareStatus] = useState<"idle" | "copied" | "error">("idle");
   const coverLibraryInputRef = useRef<HTMLInputElement | null>(null);
   const coverCameraInputRef = useRef<HTMLInputElement | null>(null);
   const cropDragStateRef = useRef<{ pointerId: number; startX: number; startY: number; startOffsetX: number; startOffsetY: number } | null>(null);
@@ -138,6 +141,20 @@ export default function TournamentScreen({ slug }: { slug: string }) {
       tone,
       text: tone === "error" ? friendlyMessage(text, fallback) : text
     });
+  }
+
+  async function copyShareUrl() {
+    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      setShareStatus("error");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareStatus("copied");
+    } catch {
+      setShareStatus("error");
+    }
   }
 
   function saveStoredAccess(next: SavedAccess) {
@@ -375,6 +392,46 @@ export default function TournamentScreen({ slug }: { slug: string }) {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [activeMatchId]);
+
+  useEffect(() => {
+    if (!isShareModalOpen) return;
+
+    let cancelled = false;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsShareModalOpen(false);
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    setShareQrCodeUrl("");
+    setShareStatus("idle");
+
+    void import("qrcode")
+      .then(({ toDataURL }) =>
+        toDataURL(shareUrl, {
+          width: 720,
+          margin: 2,
+          errorCorrectionLevel: "M",
+          color: {
+            dark: "#17213d",
+            light: "#ffffff"
+          }
+        })
+      )
+      .then((dataUrl) => {
+        if (!cancelled) setShareQrCodeUrl(dataUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setShareStatus("error");
+      });
+
+    return () => {
+      cancelled = true;
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isShareModalOpen, shareUrl]);
 
   useEffect(() => {
     if (!originalCoverImageUrl) {
@@ -1093,16 +1150,11 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               <button
                 className="btn-warning"
                 onClick={() => {
-                  if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
-                    showMessage("admin", "error", "この端末ではコピーが使えませんでした。URLを長押ししてコピーしてください。", "共有URLをコピーできませんでした。");
-                    return;
-                  }
-
-                  void navigator.clipboard.writeText(shareUrl);
+                  setIsShareModalOpen(true);
                 }}
                 type="button"
               >
-                共有URLをコピー
+                共有URL・QRコード
               </button>
             </div>
           </div>
@@ -2060,6 +2112,74 @@ export default function TournamentScreen({ slug }: { slug: string }) {
             <p className={`mt-4 system-message ${message.tone === "error" ? "system-message-error" : "system-message-success"}`}>{message.text}</p>
           ) : null}
         </section>
+
+        {isShareModalOpen ? (
+          <div
+            className="fixed inset-0 z-[70] overflow-y-auto bg-[rgba(14,22,46,0.4)] px-3 py-4 backdrop-blur-md sm:px-6 sm:py-8"
+            onClick={() => setIsShareModalOpen(false)}
+            role="presentation"
+          >
+            <div className="mx-auto grid min-h-full max-w-lg place-items-center">
+              <section
+                aria-labelledby="share-modal-title"
+                aria-modal="true"
+                className="w-full animate-[modal-rise-in_0.38s_ease-out] rounded-[28px] border border-[rgba(255,255,255,0.76)] bg-[rgba(255,255,255,0.97)] p-4 shadow-[0_32px_90px_rgba(40,56,105,0.3)] sm:rounded-[32px] sm:p-6"
+                onClick={(event) => event.stopPropagation()}
+                role="dialog"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="eyebrow">Share tournament</p>
+                    <h2 className="mt-1 text-2xl font-bold leading-tight text-[#1e2a4a]" id="share-modal-title">
+                      大会を共有
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-[#6f7b94]">QRコードを読み取ると、この大会のログイン画面が開きます。</p>
+                  </div>
+                  <button
+                    aria-label="共有画面を閉じる"
+                    autoFocus
+                    className="modal-icon-close"
+                    onClick={() => setIsShareModalOpen(false)}
+                    type="button"
+                  >
+                    <span aria-hidden="true">×</span>
+                  </button>
+                </div>
+
+                <div className="mx-auto mt-5 grid aspect-square w-full max-w-[300px] place-items-center overflow-hidden rounded-[24px] border border-[rgba(114,132,181,0.14)] bg-white p-3 shadow-[0_16px_40px_rgba(76,91,145,0.12)]">
+                  {shareQrCodeUrl ? (
+                    <img alt={`${snapshot.tournament.name}の共有QRコード`} className="h-full w-full" src={shareQrCodeUrl} />
+                  ) : shareStatus === "error" ? (
+                    <p className="px-5 text-center text-sm leading-6 text-[#bf5b5b]">QRコードを作れませんでした。URLを長押しして共有してください。</p>
+                  ) : (
+                    <div className="grid place-items-center gap-3 text-sm text-[#6f7b94]">
+                      <span className="loading-spinner" aria-hidden="true" />
+                      QRコードを作成中...
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-5 rounded-[20px] border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.92)] p-3">
+                  <p className="break-all text-sm leading-6 text-[#5d6683]">{shareUrl}</p>
+                </div>
+
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <button className="btn-primary" onClick={() => void copyShareUrl()} type="button">
+                    {shareStatus === "copied" ? "コピーしました" : "URLをコピー"}
+                  </button>
+                  <button className="btn-ghost py-3 text-base" onClick={() => setIsShareModalOpen(false)} type="button">
+                    閉じる
+                  </button>
+                </div>
+                {shareStatus === "error" ? (
+                  <p aria-live="polite" className="mt-3 text-center text-sm text-[#bf5b5b]" role="alert">
+                    コピーできませんでした。上のURLを長押ししてコピーしてください。
+                  </p>
+                ) : null}
+              </section>
+            </div>
+          </div>
+        ) : null}
 
         {activeMatch
           ? (() => {
