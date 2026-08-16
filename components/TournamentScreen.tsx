@@ -1586,7 +1586,13 @@ export default function TournamentScreen({ slug }: { slug: string }) {
         </section>
 
         {snapshot.tournament.format === "tournament" ? (
-          <Bracket rounds={rounds} participantById={participantById} onSelectMatch={openMatchModal} canSelectMatch={(match) => canUseAdminTools || isMatchForParticipant(match, activeParticipantId)} />
+          <Bracket
+            rounds={rounds}
+            participantById={participantById}
+            onSelectMatch={openMatchModal}
+            canSelectMatch={(match) => canUseAdminTools || isMatchForParticipant(match, activeParticipantId)}
+            highlightMatch={(match) => isParticipantLoggedIn && isMatchForParticipant(match, activeParticipantId)}
+          />
         ) : (
           <>
             <LeagueMatrix
@@ -1595,6 +1601,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
               participantById={participantById}
               onSelectMatch={openMatchModal}
               canSelectMatch={(match) => canUseAdminTools || isMatchForParticipant(match, activeParticipantId)}
+              highlightMatch={(match) => isParticipantLoggedIn && isMatchForParticipant(match, activeParticipantId)}
             />
             <Standings snapshot={snapshot} />
             {playoffGroups.map((group) => (
@@ -1614,6 +1621,7 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                   participantById={participantById}
                   onSelectMatch={openMatchModal}
                   canSelectMatch={(match) => canUseAdminTools || isMatchForParticipant(match, activeParticipantId)}
+                  highlightMatch={(match) => isParticipantLoggedIn && isMatchForParticipant(match, activeParticipantId)}
                   title={group.title}
                   roundOffset={group.offset}
                 />
@@ -1717,6 +1725,9 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                             const isCurrentMatch = currentScheduleEntryIds.has(entry.id) && effectiveStatus !== "completed";
                             const isPreparingMatch = preparingScheduleEntryIds.has(entry.id) && effectiveStatus !== "completed";
                             const busyParticipantIds = busyParticipantIdsByScheduleEntry.get(entry.id);
+                            const isOtherParticipantMatch = Boolean(
+                              isParticipantLoggedIn && match && !isMatchForParticipant(match, activeParticipantId)
+                            );
 
                             return (
                               <article
@@ -1793,6 +1804,8 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                       className={`w-full rounded-xl border px-3 py-2 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-[#5a5df0] ${
                                         match.locked
                                           ? "border-[rgba(90,93,240,0.16)] bg-[rgba(90,93,240,0.08)] text-[#5a5df0] hover:bg-[rgba(90,93,240,0.12)]"
+                                          : isOtherParticipantMatch
+                                            ? "border-[rgba(114,132,181,0.16)] bg-[rgba(239,242,249,0.94)] text-[#8b94aa] hover:bg-[rgba(233,237,246,0.98)]"
                                           : "border-[rgba(241,184,75,0.24)] bg-[rgba(241,184,75,0.12)] text-[#a97116] hover:bg-[rgba(241,184,75,0.18)]"
                                       }`}
                                       onClick={() => openMatchModal(match.id)}
@@ -1892,6 +1905,9 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                           const isCurrentMatch = currentScheduleEntryIds.has(entry.id) && effectiveStatus !== "completed";
                           const isPreparingMatch = preparingScheduleEntryIds.has(entry.id) && effectiveStatus !== "completed";
                           const busyParticipantIds = busyParticipantIdsByScheduleEntry.get(entry.id);
+                          const isOtherParticipantMatch = Boolean(
+                            isParticipantLoggedIn && match && !isMatchForParticipant(match, activeParticipantId)
+                          );
 
                           return (
                             <td
@@ -1969,6 +1985,8 @@ export default function TournamentScreen({ slug }: { slug: string }) {
                                     className={`w-full rounded-lg border px-2 py-1.5 text-xs font-bold transition focus:outline-none focus:ring-2 focus:ring-[#5a5df0] ${
                                       match.locked
                                         ? "border-[rgba(90,93,240,0.16)] bg-[rgba(90,93,240,0.08)] text-[#5a5df0] hover:bg-[rgba(90,93,240,0.12)]"
+                                        : isOtherParticipantMatch
+                                          ? "border-[rgba(114,132,181,0.16)] bg-[rgba(239,242,249,0.94)] text-[#8b94aa] hover:bg-[rgba(233,237,246,0.98)]"
                                         : "border-[rgba(241,184,75,0.24)] bg-[rgba(241,184,75,0.12)] text-[#a97116] hover:bg-[rgba(241,184,75,0.18)]"
                                     }`}
                                     onClick={() => openMatchModal(match.id)}
@@ -2247,13 +2265,15 @@ function LeagueMatrix({
   matches,
   participantById,
   onSelectMatch,
-  canSelectMatch
+  canSelectMatch,
+  highlightMatch
 }: {
   snapshot: TournamentSnapshot;
   matches: Match[];
   participantById: Map<string, PublicParticipant>;
   onSelectMatch: (matchId: string) => void;
   canSelectMatch: (match: Match) => boolean;
+  highlightMatch: (match: Match) => boolean;
 }) {
   const blocks =
     snapshot.tournament.format === "league"
@@ -2301,6 +2321,7 @@ function LeagueMatrix({
                                 participantById={participantById}
                                 onSelectMatch={onSelectMatch}
                                 canSelectMatch={canSelectMatch}
+                                highlightMatch={highlightMatch}
                               />
                             )}
                           </td>
@@ -2324,7 +2345,8 @@ function LeagueCell({
   matches,
   participantById,
   onSelectMatch,
-  canSelectMatch
+  canSelectMatch,
+  highlightMatch
 }: {
   rowId: string;
   columnId: string;
@@ -2332,6 +2354,7 @@ function LeagueCell({
   participantById: Map<string, PublicParticipant>;
   onSelectMatch: (matchId: string) => void;
   canSelectMatch: (match: Match) => boolean;
+  highlightMatch: (match: Match) => boolean;
 }) {
   const match = matches.find(
     (item) =>
@@ -2341,12 +2364,15 @@ function LeagueCell({
 
   if (!match) return <span className="text-[#6f7b94]">未</span>;
   const canSelect = canSelectMatch(match);
+  const isHighlighted = highlightMatch(match);
   if (match.participant1_score === null || match.participant2_score === null) {
     return (
       <button
-        className={`h-full w-full rounded-lg px-1 py-1.5 text-xs font-bold transition focus:outline-none focus:ring-2 focus:ring-[#5a5df0] ${
-          canSelect
-            ? "bg-[rgba(241,184,75,0.14)] text-[#c58a20] hover:bg-[rgba(241,184,75,0.2)]"
+        className={`h-full w-full rounded-lg border px-1 py-1.5 text-xs font-bold transition focus:outline-none focus:ring-2 focus:ring-[#5a5df0] ${
+          isHighlighted
+            ? "border-[#5a5df0] bg-[rgba(90,93,240,0.1)] text-[#4f52dc] shadow-[0_0_0_2px_rgba(90,93,240,0.1)] hover:bg-[rgba(90,93,240,0.15)]"
+            : canSelect
+              ? "border-transparent bg-[rgba(241,184,75,0.14)] text-[#c58a20] hover:bg-[rgba(241,184,75,0.2)]"
             : "bg-[rgba(243,246,255,0.96)] text-[#6f7b94] hover:bg-[rgba(236,241,252,0.98)]"
         }`}
         onClick={() => onSelectMatch(match.id)}
@@ -2379,6 +2405,7 @@ function Bracket({
   participantById,
   onSelectMatch,
   canSelectMatch,
+  highlightMatch,
   title = "勝ち上がり表",
   roundOffset = 0
 }: {
@@ -2386,6 +2413,7 @@ function Bracket({
   participantById: Map<string, PublicParticipant>;
   onSelectMatch: (matchId: string) => void;
   canSelectMatch: (match: Match) => boolean;
+  highlightMatch: (match: Match) => boolean;
   title?: string;
   roundOffset?: number;
 }) {
@@ -2399,7 +2427,14 @@ function Bracket({
             <p className="mb-2 text-sm font-bold text-[#5a5df0]">{bracketRoundLabel(roundIndex, rounds.length)}</p>
             <div className="grid gap-2">
               {round.map((match) => (
-                <BracketMatch key={match.id} match={match} participantById={participantById} onSelectMatch={onSelectMatch} canSelectMatch={canSelectMatch} />
+                <BracketMatch
+                  key={match.id}
+                  match={match}
+                  participantById={participantById}
+                  onSelectMatch={onSelectMatch}
+                  canSelectMatch={canSelectMatch}
+                  highlightMatch={highlightMatch}
+                />
               ))}
             </div>
           </div>
@@ -2413,18 +2448,21 @@ function BracketMatch({
   match,
   participantById,
   onSelectMatch,
-  canSelectMatch
+  canSelectMatch,
+  highlightMatch
 }: {
   match: Match;
   participantById: Map<string, PublicParticipant>;
   onSelectMatch: (matchId: string) => void;
   canSelectMatch: (match: Match) => boolean;
+  highlightMatch: (match: Match) => boolean;
 }) {
   const left = nameFor(match.participant1_id, participantById);
   const right = nameFor(match.participant2_id, participantById);
   const isReady = Boolean(match.participant1_id && match.participant2_id);
   const hasScore = match.participant1_score !== null && match.participant2_score !== null;
   const canSelect = canSelectMatch(match);
+  const isHighlighted = highlightMatch(match);
 
   return (
     <div className="rounded-[18px] border border-[rgba(114,132,181,0.14)] bg-[rgba(248,250,255,0.92)] p-2 text-sm shadow-lg shadow-[rgba(123,141,191,0.08)]">
@@ -2432,11 +2470,13 @@ function BracketMatch({
       <p className={`mt-1 rounded-lg px-1.5 py-1 ${match.winner_id === match.participant2_id ? "bg-[rgba(90,93,240,0.1)] font-bold text-[#5a5df0]" : ""}`} title={right}>{displayLabel(right)}</p>
       {isReady ? (
         <button
-          className={`mt-2 w-full rounded-lg px-1.5 py-1.5 text-xs font-bold transition focus:outline-none focus:ring-2 ${
+          className={`mt-2 w-full rounded-lg border px-1.5 py-1.5 text-xs font-bold transition focus:outline-none focus:ring-2 ${
             hasScore
-              ? "bg-[rgba(90,93,240,0.08)] text-[#5a5df0] hover:bg-[rgba(90,93,240,0.12)] focus:ring-[#5a5df0]"
-              : canSelect
-                ? "bg-[rgba(241,184,75,0.14)] text-[#c58a20] hover:bg-[rgba(241,184,75,0.2)] focus:ring-[#5a5df0]"
+              ? "border-transparent bg-[rgba(90,93,240,0.08)] text-[#5a5df0] hover:bg-[rgba(90,93,240,0.12)] focus:ring-[#5a5df0]"
+              : isHighlighted
+                ? "border-[#5a5df0] bg-[rgba(90,93,240,0.1)] text-[#4f52dc] shadow-[0_0_0_2px_rgba(90,93,240,0.1)] hover:bg-[rgba(90,93,240,0.15)] focus:ring-[#5a5df0]"
+                : canSelect
+                  ? "border-transparent bg-[rgba(241,184,75,0.14)] text-[#c58a20] hover:bg-[rgba(241,184,75,0.2)] focus:ring-[#5a5df0]"
                 : "bg-[rgba(243,246,255,0.96)] text-[#6f7b94] hover:bg-[rgba(236,241,252,0.98)] focus:ring-[#5a5df0]"
           }`}
           onClick={() => onSelectMatch(match.id)}
